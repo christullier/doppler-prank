@@ -70,6 +70,7 @@ class LiveSongProcessor extends AudioWorkletProcessor {
     this.crossfadeFromHead = 0;
     this.crossfadeToHead = 0;
     this._driftLogFrames = 0;
+    this._progressFrames = 0;
 
     this.port.onmessage = (event) => {
       try {
@@ -150,6 +151,17 @@ class LiveSongProcessor extends AudioWorkletProcessor {
       `[worklet] transport applied | progress=${(message.progress || 0).toFixed(4)} desiredHead=${desiredHead.toFixed(1)} currentHead=${this.currentReadHead.toFixed(1)} drift=${driftSamples.toFixed(1)}smpl rate=${this.targetRate.toFixed(3)} hardSeek=${message.hardSeek} playing=${message.playing}`,
     );
 
+    if (!this.graphPlaying) {
+      this.currentReadHead = desiredHead;
+      this.targetReadHead = desiredHead;
+      this.crossfadeRemaining = 0;
+      this.port.postMessage({
+        type: "position",
+        fraction: this.length > 0 ? this.currentReadHead / this.length : 0,
+      });
+      return;
+    }
+
     if (message.hardSeek) {
       if (!Number.isFinite(this.currentReadHead)) {
         this.currentReadHead = desiredHead;
@@ -227,8 +239,22 @@ class LiveSongProcessor extends AudioWorkletProcessor {
       return true;
     }
 
+    if (!this.graphPlaying && this.crossfadeRemaining <= 0) {
+      zeroOutputs(outputs);
+      return true;
+    }
+
     const frameCount = outputChannels[0].length;
     const rateStep = (this.targetRate - this.currentRate) / Math.max(frameCount, 1);
+
+    this._progressFrames += frameCount;
+    if (this._progressFrames >= 11025) {
+      this._progressFrames = 0;
+      this.port.postMessage({
+        type: "position",
+        fraction: this.length > 0 ? this.currentReadHead / this.length : 0,
+      });
+    }
 
     this._driftLogFrames += frameCount;
     // Log approximately once per second (sample rate ~44100 or ~48000).

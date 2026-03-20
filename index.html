@@ -65,6 +65,17 @@
             <canvas id="scene-canvas" aria-label="Top-down simulation view"></canvas>
           </div>
 
+          <div class="scene-overlay-controls">
+            <label class="overlay-toggle" for="show-normal-locus">
+              <input id="show-normal-locus" type="checkbox" />
+              <span>Show sounds-normal locus</span>
+            </label>
+            <label class="overlay-toggle" for="circular-track">
+              <input id="circular-track" type="checkbox" />
+              <span>Circular track</span>
+            </label>
+          </div>
+
           <div class="legend">
             <span><i class="swatch car"></i>Car path</span>
             <span><i class="swatch target"></i>Target</span>
@@ -134,6 +145,32 @@
                 </label>
               </div>
             </div>
+
+            <div class="live-monitor-field">
+              <span>Effect mode</span>
+              <div class="radio-inputs" role="radiogroup" aria-label="Effect mode">
+                <label class="radio">
+                  <input id="audio-effect-prank" type="radio" name="audio-effect-mode" value="prank" checked />
+                  <span class="name">Prank</span>
+                </label>
+                <label class="radio">
+                  <input id="audio-effect-normal" type="radio" name="audio-effect-mode" value="normal" />
+                  <span class="name">Normal</span>
+                </label>
+              </div>
+            </div>
+
+            <div class="song-progress" id="song-progress" hidden>
+              <div class="song-progress-bar" role="progressbar" aria-label="Song position">
+                <div class="song-progress-fill" id="song-progress-fill"></div>
+              </div>
+              <div class="song-progress-time">
+                <span id="song-progress-current">0:00</span>
+                <span id="song-progress-total">0:00</span>
+              </div>
+            </div>
+
+            <p class="live-audio-status" id="live-audio-status"></p>
           </div>
 
           <div class="audio-box">
@@ -168,36 +205,18 @@
             </p>
           </div>
 
-          <div id="previews-box" class="audio-box" hidden>
-            <h3 class="audio-box-title">Previews</h3>
-
-            <div class="audio-preview-grid">
-              <article class="audio-card">
-                <h3>Original upload</h3>
-                <audio id="audio-original" controls preload="none"></audio>
-              </article>
-
-              <article class="audio-card">
-                <h3>In the car</h3>
-                <audio id="audio-car" controls preload="none"></audio>
-              </article>
-
-              <article class="audio-card">
-                <h3>Target hears</h3>
-                <audio id="audio-target" controls preload="none"></audio>
-              </article>
-
-              <article class="audio-card">
-                <h3>Bystander hears</h3>
-                <audio id="audio-bystander" controls preload="none"></audio>
-              </article>
-            </div>
-          </div>
         </section>
       </main>
     </div>
 
-    <script src="app.js"></script>
+    <script src="js/config.js"></script>
+    <script src="js/state.js"></script>
+    <script src="js/dom.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/simulation.js"></script>
+    <script src="js/audio.js"></script>
+    <script src="js/render.js"></script>
+    <script src="js/events.js"></script>
     <script>
       (() => {
         function readTheme() {

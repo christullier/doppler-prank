@@ -251,9 +251,38 @@ li {
 
 .live-audio-header p,
 .live-audio-status {
-  margin: 6px 0 0;
+  margin: 0;
   color: var(--muted);
   line-height: 1.5;
+  font-size: 0.85rem;
+}
+
+.song-progress {
+  display: grid;
+  gap: 6px;
+}
+
+.song-progress-bar {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--toggle-track);
+  overflow: hidden;
+}
+
+.song-progress-fill {
+  height: 100%;
+  width: 0%;
+  border-radius: 2px;
+  background: var(--target);
+  transition: width 0.25s linear;
+}
+
+.song-progress-time {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.78rem;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
 }
 
 .live-toggle {
@@ -582,28 +611,6 @@ input[type="range"] {
   line-height: 1.5;
 }
 
-.audio-preview-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 14px;
-}
-
-.audio-card {
-  padding: 0;
-  border: 0;
-  background: transparent;
-}
-
-.audio-card h3 {
-  margin: 0;
-  font-size: 1rem;
-}
-
-.audio-card audio {
-  width: 100%;
-  margin-top: 8px;
-}
-
 canvas {
   display: block;
   width: 100%;
@@ -622,6 +629,26 @@ canvas {
 
 #chart-canvas {
   height: 430px;
+}
+
+.scene-overlay-controls {
+  display: flex;
+  gap: 12px;
+  padding-top: 10px;
+}
+
+.overlay-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.88rem;
+  color: var(--muted);
+  cursor: pointer;
+  user-select: none;
+}
+
+.overlay-toggle input {
+  cursor: pointer;
 }
 
 .legend {
@@ -702,10 +729,6 @@ canvas {
   .live-audio-header {
     flex-direction: column;
     align-items: stretch;
-  }
-
-  .audio-preview-grid {
-    grid-template-columns: 1fr;
   }
 
   #scene-canvas {
