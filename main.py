@@ -1,3 +1,10 @@
+"""Legacy prototype.
+
+This file is not used by the browser app. It models relativistic Doppler shift
+with the speed of light, which does not match the web app's acoustic moving-
+source approximation.
+"""
+
 import math
 
 def calculate_doppler_effect(frequency_0, velocity, c=299792458):

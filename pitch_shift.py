@@ -1,3 +1,10 @@
+"""Legacy prototype.
+
+This file is not used by the browser app. It experiments with a fixed FFT-bin
+shift on a WAV file, which does not match the web app's real-time rate-based
+AudioWorklet processing.
+"""
+
 import wave
 
 import numpy as np

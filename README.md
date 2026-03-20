@@ -23,12 +23,9 @@ It visualizes:
   pitch
 - how the same prank affects someone standing somewhere else
 
-It also lets you upload an audio clip and render three preview versions of the
-same pass:
-
-- what the car emits
-- what the target hears
-- what the bystander hears
+It also lets you upload an audio clip and use it as the source for the live
+song monitor, so you can hear the pass from the car, target, or bystander
+perspective in real time.
 
 ## Run it
 
@@ -46,7 +43,7 @@ Then open:
 
 - `index.html` - app shell and controls
 - `styles.css` - layout and visual styling
-- `app.js` - simulation math, animation, and canvas rendering
+- `js/` - vanilla app logic (config, state, DOM refs, simulation, audio, rendering, events); loaded in order by `index.html`
 - `main.py` - original Doppler prototype
 - `pitch_shift.py` - original audio pitch-shifting experiment
 
@@ -54,6 +51,5 @@ Then open:
 
 The web app uses the classical instantaneous Doppler approximation for a moving
 source and stationary listeners. It is meant as an interactive visualization,
-not a high-precision acoustics model. The audio previews use a lightweight
-windowed resampling pass in the browser, so they are best treated as a
-qualitative demo rather than a studio-grade audio effect.
+not a high-precision acoustics model. The live uploaded-song monitor is a
+qualitative browser-based effect rather than a studio-grade audio processor.
