@@ -111,7 +111,6 @@ const state = { ...initialControlState };
 state.progress = 0.5;
 state.playing = true;
 
-const progressInput = document.getElementById("progress");
 const playToggle = document.getElementById("play-toggle");
 const resetButton = document.getElementById("reset");
 const controlGroups = document.getElementById("control-groups");
@@ -1325,7 +1324,6 @@ async function resetSimulation() {
 }
 
 function render() {
-  progressInput.value = String(Math.round(state.progress * 1000));
   const snapshot = currentSnapshot();
   const samples = sampleSeries();
 
@@ -1350,11 +1348,6 @@ function tick() {
 
   requestAnimationFrame(tick);
 }
-
-progressInput.addEventListener("input", () => {
-  state.progress = Number(progressInput.value) / 1000;
-  render();
-});
 
 sceneCanvas.addEventListener("pointerdown", (event) => {
   resizeCanvas(sceneCanvas);

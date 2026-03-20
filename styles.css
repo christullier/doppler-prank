@@ -292,7 +292,7 @@ li {
 
 .transport {
   display: grid;
-  grid-template-columns: auto auto 1fr;
+  grid-template-columns: 1fr 1fr;
   gap: 12px;
   align-items: center;
   padding: 18px 0 14px;
@@ -311,16 +311,6 @@ button {
 button.secondary {
   background: rgba(34, 23, 13, 0.12);
   color: var(--ink);
-}
-
-.transport-scrub {
-  display: grid;
-  gap: 6px;
-}
-
-.transport-scrub span {
-  font-size: 0.86rem;
-  color: var(--muted);
 }
 
 .control-groups {
@@ -590,14 +580,6 @@ canvas {
   .page-shell {
     width: min(100vw - 20px, 1400px);
     padding-top: 12px;
-  }
-
-  .transport {
-    grid-template-columns: 1fr 1fr;
-  }
-
-  .transport-scrub {
-    grid-column: 1 / -1;
   }
 
   .stats-grid {
