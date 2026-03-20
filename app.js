@@ -113,6 +113,8 @@ state.playing = true;
 
 const playToggle = document.getElementById("play-toggle");
 const resetButton = document.getElementById("reset");
+const themeToggle = document.getElementById("theme-toggle");
+const themeToggleLabel = document.getElementById("theme-toggle-label");
 const controlGroups = document.getElementById("control-groups");
 const statsGrid = document.getElementById("stats-grid");
 const sceneCanvas = document.getElementById("scene-canvas");
@@ -137,10 +139,15 @@ const audioPlayers = {
 const sceneContext = sceneCanvas.getContext("2d");
 const chartContext = chartCanvas.getContext("2d");
 
+const themeState = {
+  current: document.documentElement.dataset.theme || "light",
+};
+
 const audioState = {
   context: null,
   sourceBuffer: null,
   sourceName: "",
+  pausedPlayerKeys: new Set(),
   rendering: false,
   renderJobId: 0,
   renderDebounceId: null,
@@ -159,8 +166,15 @@ const audioState = {
     synthGain: null,
     songGain: null,
     oscillators: [],
-    songElement: null,
-    songNode: null,
+    songWorkletNode: null,
+    songWorkletReady: false,
+    songWorkletModulePromise: null,
+    songBufferVersion: 0,
+    songLoadedBufferVersion: 0,
+    songAudioData: null,
+    songBufferLoadResolvers: new Map(),
+    lastSongTransportKey: "",
+    resumeNeedsHardSync: false,
     lastStatusKey: "",
   },
 };
@@ -193,6 +207,25 @@ function setCheckedRadioValue(name, value) {
   const radio = document.querySelector(`input[name="${name}"][value="${value}"]`);
   if (radio) {
     radio.checked = true;
+  }
+}
+
+function cssVar(name) {
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+}
+
+function syncThemeUI() {
+  themeState.current = document.documentElement.dataset.theme === "dark" ? "dark" : "light";
+  const nextTheme = themeState.current === "dark" ? "light" : "dark";
+  const nextLabel = nextTheme === "dark" ? "Dark mode" : "Light mode";
+
+  if (themeToggle) {
+    themeToggle.setAttribute("aria-pressed", String(themeState.current === "dark"));
+    themeToggle.setAttribute("aria-label", `Switch to ${nextTheme} mode`);
+  }
+
+  if (themeToggleLabel) {
+    themeToggleLabel.textContent = nextLabel;
   }
 }
 
@@ -238,12 +271,6 @@ function clearOriginalPreview() {
   if (audioState.originalUrl) {
     URL.revokeObjectURL(audioState.originalUrl);
     audioState.originalUrl = null;
-  }
-
-  if (audioState.live.songElement) {
-    audioState.live.songElement.pause();
-    audioState.live.songElement.removeAttribute("src");
-    audioState.live.songElement.load();
   }
 
   audioPlayers.original.removeAttribute("src");
@@ -293,9 +320,19 @@ function resetAudioState() {
   clearAudioPreviews();
   audioState.sourceBuffer = null;
   audioState.sourceName = "";
+  audioState.live.songAudioData = null;
+  audioState.live.songBufferVersion += 1;
+  audioState.live.songLoadedBufferVersion = 0;
+  audioState.live.songWorkletReady = false;
+  audioState.live.lastSongTransportKey = "";
+  audioState.live.resumeNeedsHardSync = false;
   audioUpload.value = "";
   updateUploadUI();
   updateAudioStatus("");
+
+  if (audioState.live.songWorkletNode) {
+    audioState.live.songWorkletNode.port.postMessage({ type: "reset" });
+  }
 
   if (audioState.live.active && audioState.live.sourceMode === "song") {
     stopLiveMonitor();
@@ -582,7 +619,7 @@ function drawDot(context, point, radius, color, label) {
   context.fill();
 
   context.font = "600 13px Avenir Next, Segoe UI, sans-serif";
-  context.fillStyle = "#22170d";
+  context.fillStyle = cssVar("--canvas-text");
   context.fillText(label, point.x + radius + 8, point.y - radius - 4);
 }
 
@@ -593,7 +630,7 @@ function drawScene(snapshot) {
 
   sceneContext.clearRect(0, 0, width, height);
 
-  sceneContext.fillStyle = "#fbf6ef";
+  sceneContext.fillStyle = cssVar("--scene-bg");
   sceneContext.fillRect(0, 0, width, height);
 
   const roadY = mapPoint({ x: 0, y: 0 }, bounds, width, height, padding).y;
@@ -614,21 +651,21 @@ function drawScene(snapshot) {
   const targetPoint = mapPoint(snapshot.target, bounds, width, height, padding);
   const bystanderPoint = mapPoint(snapshot.bystander, bounds, width, height, padding);
 
-  sceneContext.strokeStyle = "rgba(177, 137, 18, 0.75)";
+  sceneContext.strokeStyle = cssVar("--scene-prank-line");
   sceneContext.lineWidth = 3;
   sceneContext.beginPath();
   sceneContext.moveTo(sourcePoint.x, sourcePoint.y);
   sceneContext.lineTo(targetPoint.x, targetPoint.y);
   sceneContext.stroke();
 
-  sceneContext.strokeStyle = "rgba(52, 88, 184, 0.35)";
+  sceneContext.strokeStyle = cssVar("--scene-bystander-line");
   sceneContext.lineWidth = 2;
   sceneContext.beginPath();
   sceneContext.moveTo(sourcePoint.x, sourcePoint.y);
   sceneContext.lineTo(bystanderPoint.x, bystanderPoint.y);
   sceneContext.stroke();
 
-  sceneContext.fillStyle = "rgba(216, 93, 60, 0.14)";
+  sceneContext.fillStyle = cssVar("--scene-rings");
   for (let ring = 1; ring <= 3; ring += 1) {
     sceneContext.beginPath();
     sceneContext.arc(sourcePoint.x, sourcePoint.y, ring * 24, 0, Math.PI * 2);
@@ -657,19 +694,19 @@ function drawScene(snapshot) {
     "bystander",
   );
 
-  sceneContext.fillStyle = "rgba(255, 255, 255, 0.85)";
-  sceneContext.strokeStyle = "rgba(34, 23, 13, 0.1)";
+  sceneContext.fillStyle = cssVar("--canvas-card");
+  sceneContext.strokeStyle = cssVar("--canvas-card-border");
   sceneContext.lineWidth = 1;
   sceneContext.beginPath();
   sceneContext.roundRect(20, 20, 310, 104, 18);
   sceneContext.fill();
   sceneContext.stroke();
 
-  sceneContext.fillStyle = "#22170d";
+  sceneContext.fillStyle = cssVar("--canvas-text");
   sceneContext.font = "700 15px Avenir Next, Segoe UI, sans-serif";
   sceneContext.fillText("Current pass snapshot", 40, 48);
   sceneContext.font = "500 13px Avenir Next, Segoe UI, sans-serif";
-  sceneContext.fillStyle = "#6b5948";
+  sceneContext.fillStyle = cssVar("--canvas-muted");
   sceneContext.fillText(`source x: ${snapshot.source.x.toFixed(1)} m`, 40, 74);
   sceneContext.fillText(
     `target delta: ${(snapshot.prankTarget.observed - snapshot.normalTarget.observed).toFixed(1)} Hz`,
@@ -731,6 +768,7 @@ function setProgressFromScenePoint(point) {
   const usableWidth = Math.max(width - padding.x * 2, 1);
   const normalized = (point.x - padding.x) / usableWidth;
   state.progress = clamp(normalized, 0, 1);
+  requestLiveSongHardSync("car scrub");
 }
 
 function updateListenerFromScenePoint(name, point) {
@@ -756,12 +794,102 @@ function finishSceneDrag() {
   sceneDragState.pointerId = null;
   sceneDragState.mode = null;
   sceneCanvas.classList.remove("dragging");
-  state.playing = sceneDragState.wasPlaying;
-  playToggle.textContent = state.playing ? "Pause" : "Play";
+  setPlaybackState(sceneDragState.wasPlaying);
+}
+
+function syncLiveMonitorPlaybackState() {
+  if (!audioState.live.masterGain) {
+    return;
+  }
+
+  const context = getAudioContext();
+  const targetGain = audioState.live.active && state.playing ? 1 : 0;
+  audioState.live.masterGain.gain.cancelScheduledValues(context.currentTime);
+  audioState.live.masterGain.gain.setValueAtTime(
+    audioState.live.masterGain.gain.value,
+    context.currentTime,
+  );
+  audioState.live.masterGain.gain.setTargetAtTime(targetGain, context.currentTime, 0.04);
+}
+
+function pauseManagedAudioPlayers() {
+  audioState.pausedPlayerKeys.clear();
+  Object.entries(audioPlayers).forEach(([key, player]) => {
+    if (!player.paused && !player.ended) {
+      audioState.pausedPlayerKeys.add(key);
+      player.pause();
+    }
+  });
+}
+
+function resumeManagedAudioPlayers() {
+  const playerKeys = Array.from(audioState.pausedPlayerKeys);
+  audioState.pausedPlayerKeys.clear();
+  playerKeys.forEach((key) => {
+    const player = audioPlayers[key];
+    if (!player || !player.src) {
+      return;
+    }
+
+    const playPromise = player.play();
+    if (playPromise && typeof playPromise.catch === "function") {
+      playPromise.catch(() => {});
+    }
+  });
+}
+
+function setPlaybackState(playing) {
+  const willPlay = Boolean(playing);
+  state.playing = willPlay;
+  playToggle.textContent = willPlay ? "Pause" : "Play";
+
+  if (willPlay) {
+    resumeManagedAudioPlayers();
+  } else {
+    pauseManagedAudioPlayers();
+  }
+
+  syncLiveMonitorPlaybackState();
+
+  if (audioState.live.active) {
+    if (willPlay && audioState.live.sourceMode === "song") {
+      requestLiveSongHardSync("playback resumed");
+    }
+    syncLiveMonitor(true);
+  }
+}
+
+function togglePlayback() {
+  setPlaybackState(!state.playing);
+}
+
+function shouldIgnoreSpacebarToggle(target) {
+  if (!(target instanceof HTMLElement)) {
+    return false;
+  }
+
+  if (target.isContentEditable || target.closest("[contenteditable='true']")) {
+    return true;
+  }
+
+  const field = target.closest("textarea, select, audio, summary, input");
+  if (!(field instanceof HTMLElement)) {
+    return false;
+  }
+
+  if (field instanceof HTMLTextAreaElement || field instanceof HTMLSelectElement || field instanceof HTMLAudioElement) {
+    return true;
+  }
+
+  if (field instanceof HTMLInputElement) {
+    return ["text", "search", "url", "tel", "email", "password", "file"].includes(field.type);
+  }
+
+  return false;
 }
 
 function drawAxes(context, width, height, padding, minY, maxY) {
-  context.strokeStyle = "rgba(34, 23, 13, 0.16)";
+  context.strokeStyle = cssVar("--canvas-axes");
   context.lineWidth = 1;
   context.beginPath();
   context.moveTo(padding, padding);
@@ -770,13 +898,13 @@ function drawAxes(context, width, height, padding, minY, maxY) {
   context.stroke();
 
   context.font = "500 12px Avenir Next, Segoe UI, sans-serif";
-  context.fillStyle = "#6b5948";
+  context.fillStyle = cssVar("--canvas-muted");
 
   for (let tick = 0; tick <= 4; tick += 1) {
     const y = padding + ((height - padding * 2) * tick) / 4;
     const ratio = tick / 4;
     const value = maxY - (maxY - minY) * ratio;
-    context.strokeStyle = "rgba(34, 23, 13, 0.08)";
+    context.strokeStyle = cssVar("--canvas-grid");
     context.beginPath();
     context.moveTo(padding, y);
     context.lineTo(width - padding, y);
@@ -828,7 +956,7 @@ function drawChart(snapshot, samples) {
   const padding = 52 * (window.devicePixelRatio || 1);
 
   chartContext.clearRect(0, 0, width, height);
-  chartContext.fillStyle = "#fbf6ef";
+  chartContext.fillStyle = cssVar("--scene-bg");
   chartContext.fillRect(0, 0, width, height);
 
   const allValues = samples.flatMap((sample) => [
@@ -845,7 +973,7 @@ function drawChart(snapshot, samples) {
   drawSeries(chartContext, samples, "prankBystander", "#3458b8", width, height, padding, minY, maxY);
 
   const cursorX = padding + state.progress * (width - padding * 2);
-  chartContext.strokeStyle = "rgba(34, 23, 13, 0.22)";
+  chartContext.strokeStyle = cssVar("--canvas-cursor");
   chartContext.lineWidth = 2;
   chartContext.beginPath();
   chartContext.moveTo(cursorX, padding);
@@ -862,12 +990,12 @@ function drawChart(snapshot, samples) {
     const y = 24 + index * 22;
     chartContext.fillStyle = color;
     chartContext.fillRect(width - 240, y - 10, 18, 10);
-    chartContext.fillStyle = "#6b5948";
+    chartContext.fillStyle = cssVar("--canvas-muted");
     chartContext.font = "500 13px Avenir Next, Segoe UI, sans-serif";
     chartContext.fillText(label, width - 214, y);
   });
 
-  chartContext.fillStyle = "#22170d";
+  chartContext.fillStyle = cssVar("--canvas-text");
   chartContext.font = "700 14px Avenir Next, Segoe UI, sans-serif";
   chartContext.fillText(
     `Current bystander error: ${(snapshot.prankBystander.observed - state.targetFrequency).toFixed(1)} Hz`,
@@ -903,6 +1031,158 @@ function serializeSourceBuffer(buffer) {
       buffer.getChannelData(channel).slice(),
     ),
   };
+}
+
+function resetLiveSongLoadResolvers(reason = "Live song buffer load was interrupted.") {
+  audioState.live.songBufferLoadResolvers.forEach(({ reject, timeoutId }) => {
+    window.clearTimeout(timeoutId);
+    reject(new Error(reason));
+  });
+  audioState.live.songBufferLoadResolvers.clear();
+}
+
+function stageLiveSongBuffer(buffer) {
+  audioState.live.songBufferVersion += 1;
+  audioState.live.songLoadedBufferVersion = 0;
+  audioState.live.songWorkletReady = false;
+  audioState.live.songAudioData = buffer ? serializeSourceBuffer(buffer) : null;
+  audioState.live.lastSongTransportKey = "";
+  audioState.live.resumeNeedsHardSync = true;
+  resetLiveSongLoadResolvers("Live song buffer was replaced.");
+}
+
+function requestLiveSongHardSync(reason = "unknown") {
+  console.log(`[audio] requestLiveSongHardSync — reason: ${reason}`);
+  audioState.live.resumeNeedsHardSync = true;
+  audioState.live.lastSongTransportKey = "";
+}
+
+function resetLiveSongProcessor() {
+  if (!audioState.live.songWorkletNode) {
+    return;
+  }
+
+  audioState.live.songWorkletNode.port.postMessage({ type: "reset" });
+  audioState.live.lastSongTransportKey = "";
+}
+
+function handleLiveSongProcessorMessage(event) {
+  const message = event.data;
+
+  if (message.type === "buffer-ready") {
+    const resolver = audioState.live.songBufferLoadResolvers.get(message.bufferVersion);
+    if (resolver) {
+      window.clearTimeout(resolver.timeoutId);
+      resolver.resolve();
+      audioState.live.songBufferLoadResolvers.delete(message.bufferVersion);
+    }
+
+    if (message.bufferVersion === audioState.live.songBufferVersion) {
+      audioState.live.songLoadedBufferVersion = message.bufferVersion;
+      audioState.live.songWorkletReady = true;
+    }
+    return;
+  }
+
+  if (message.type === "error") {
+    if (typeof message.bufferVersion === "number") {
+      const resolver = audioState.live.songBufferLoadResolvers.get(message.bufferVersion);
+      if (resolver) {
+        window.clearTimeout(resolver.timeoutId);
+        resolver.reject(new Error(message.message || "Live song DSP failed."));
+        audioState.live.songBufferLoadResolvers.delete(message.bufferVersion);
+      }
+    } else {
+      resetLiveSongLoadResolvers(message.message || "Live song DSP failed.");
+    }
+
+    audioState.live.songWorkletReady = false;
+    return;
+  }
+}
+
+async function ensureSongWorkletNode() {
+  const context = ensureLiveMonitorBus();
+
+  if (!context.audioWorklet || typeof AudioWorkletNode === "undefined") {
+    throw new Error("unsupported-live-song");
+  }
+
+  if (!audioState.live.songWorkletModulePromise) {
+    audioState.live.songWorkletModulePromise = context.audioWorklet
+      .addModule("live-song-processor.js")
+      .catch((error) => {
+        audioState.live.songWorkletModulePromise = null;
+        throw error;
+      });
+  }
+
+  await audioState.live.songWorkletModulePromise;
+
+  if (!audioState.live.songWorkletNode) {
+    const node = new AudioWorkletNode(context, "live-song-processor", {
+      numberOfInputs: 0,
+      numberOfOutputs: 1,
+      outputChannelCount: [2],
+    });
+    node.port.addEventListener("message", handleLiveSongProcessorMessage);
+    if (typeof node.port.start === "function") {
+      node.port.start();
+    }
+    node.connect(audioState.live.songGain);
+    audioState.live.songWorkletNode = node;
+  }
+
+  return context;
+}
+
+async function pushSongBufferToWorklet() {
+  if (!audioState.sourceBuffer) {
+    throw new Error("missing-song");
+  }
+
+  if (!audioState.live.songWorkletNode) {
+    throw new Error("missing-song-worklet");
+  }
+
+  const version = audioState.live.songBufferVersion;
+  if (audioState.live.songLoadedBufferVersion === version && audioState.live.songWorkletReady) {
+    return;
+  }
+
+  const audioData = audioState.live.songAudioData || serializeSourceBuffer(audioState.sourceBuffer);
+  audioState.live.songAudioData = null;
+  audioState.live.songWorkletReady = false;
+
+  const timeoutId = window.setTimeout(() => {
+    const resolver = audioState.live.songBufferLoadResolvers.get(version);
+    if (!resolver) {
+      return;
+    }
+
+    resolver.reject(new Error("Live song buffer load timed out."));
+    audioState.live.songBufferLoadResolvers.delete(version);
+  }, 2000);
+
+  const loadPromise = new Promise((resolve, reject) => {
+    audioState.live.songBufferLoadResolvers.set(version, {
+      resolve,
+      reject,
+      timeoutId,
+    });
+  });
+
+  const transferList = audioData.channels.map((channel) => channel.buffer);
+  audioState.live.songWorkletNode.port.postMessage(
+    {
+      type: "load-buffer",
+      bufferVersion: version,
+      audioData,
+    },
+    transferList,
+  );
+
+  await loadPromise;
 }
 
 function perspectiveLabel(mode) {
@@ -991,87 +1271,27 @@ function ensureSynthMonitorNodes() {
   return context;
 }
 
-function ensureSongMonitorNode() {
-  const context = ensureLiveMonitorBus();
-
-  if (audioState.live.songElement && audioState.live.songNode) {
-    return context;
-  }
-
-  const songElement = new Audio();
-  songElement.loop = true;
-  songElement.preload = "auto";
-
-  if ("preservesPitch" in songElement) {
-    songElement.preservesPitch = false;
-  }
-  if ("webkitPreservesPitch" in songElement) {
-    songElement.webkitPreservesPitch = false;
-  }
-  if ("mozPreservesPitch" in songElement) {
-    songElement.mozPreservesPitch = false;
-  }
-
-  if (audioState.originalUrl) {
-    songElement.src = audioState.originalUrl;
-  }
-
-  const songNode = context.createMediaElementSource(songElement);
-  songNode.connect(audioState.live.songGain);
-
-  audioState.live.songElement = songElement;
-  audioState.live.songNode = songNode;
-  return context;
-}
-
-function syncSongMonitorSource() {
-  if (!audioState.live.songElement) {
-    return;
-  }
-
-  if (!audioState.originalUrl) {
-    audioState.live.songElement.pause();
-    audioState.live.songElement.removeAttribute("src");
-    audioState.live.songElement.load();
-    return;
-  }
-
-  if (audioState.live.songElement.src !== audioState.originalUrl) {
-    audioState.live.songElement.src = audioState.originalUrl;
-    audioState.live.songElement.load();
-  }
-}
-
 async function setLiveMonitorSourceMode(mode) {
   const context = ensureLiveMonitorBus();
   audioState.live.synthGain.gain.setValueAtTime(0, context.currentTime);
   audioState.live.songGain.gain.setValueAtTime(0, context.currentTime);
 
   if (mode === "song") {
-    if (!audioState.originalUrl) {
+    if (!audioState.sourceBuffer) {
       throw new Error("missing-song");
     }
 
-    ensureSongMonitorNode();
-    syncSongMonitorSource();
+    await ensureSongWorkletNode();
+    await pushSongBufferToWorklet();
     audioState.live.songGain.gain.setValueAtTime(1, context.currentTime);
-
-    if (audioState.live.songElement.paused) {
-      audioState.live.songElement.currentTime = 0;
-      await audioState.live.songElement.play();
-    }
-
+    requestLiveSongHardSync("source mode switched to song");
     audioState.live.sourceMode = mode;
     return;
   }
 
   ensureSynthMonitorNodes();
   audioState.live.synthGain.gain.setValueAtTime(1, context.currentTime);
-
-  if (audioState.live.songElement && !audioState.live.songElement.paused) {
-    audioState.live.songElement.pause();
-    audioState.live.songElement.currentTime = 0;
-  }
+  resetLiveSongProcessor();
 
   audioState.live.sourceMode = mode;
 }
@@ -1085,11 +1305,9 @@ function syncLiveMonitor(force = false) {
   const sourceMode = audioState.live.sourceMode;
   const perspective = getLivePerspective();
   const source = getSourcePosition(state.progress);
-  const frequency = clamp(
-    getPerspectiveFrequencies(state.progress)[perspective],
-    40,
-    2400,
-  );
+  const rawFrequencies = getPerspectiveFrequencies(state.progress);
+  const rawFrequency = rawFrequencies[perspective];
+  const frequency = clamp(rawFrequency, 40, 2400);
   const playbackRate = clamp(
     frequency / Math.max(state.baseFrequency, 1),
     0.35,
@@ -1097,8 +1315,43 @@ function syncLiveMonitor(force = false) {
   );
 
   audioState.live.perspective = perspective;
-  if (sourceMode === "song" && audioState.live.songElement) {
-    audioState.live.songElement.playbackRate = playbackRate;
+  if (sourceMode === "song") {
+    const hardSeek = force || audioState.live.resumeNeedsHardSync;
+    const transportKey = [
+      audioState.live.songBufferVersion,
+      perspective,
+      state.playing ? "1" : "0",
+      playbackRate.toFixed(3),
+      state.progress.toFixed(4),
+      hardSeek ? "1" : "0",
+    ].join(":");
+
+    const workletReady =
+      audioState.live.songWorkletNode
+      && audioState.live.songWorkletReady
+      && audioState.live.songLoadedBufferVersion === audioState.live.songBufferVersion;
+
+    if (workletReady && (force || transportKey !== audioState.live.lastSongTransportKey)) {
+      console.log(
+        `[audio] transport sent | progress=${state.progress.toFixed(4)} rate=${playbackRate.toFixed(3)} freq=${frequency.toFixed(1)}Hz (raw=${rawFrequency.toFixed(1)}) base=${state.baseFrequency}Hz hardSeek=${hardSeek} playing=${state.playing} ctxTime=${context.currentTime.toFixed(3)}s`,
+      );
+      audioState.live.songWorkletNode.port.postMessage({
+        type: "transport",
+        bufferVersion: audioState.live.songBufferVersion,
+        progress: state.progress,
+        playbackRate,
+        playing: state.playing,
+        perspective,
+        hardSeek,
+        contextTime: context.currentTime,
+      });
+      audioState.live.lastSongTransportKey = transportKey;
+      audioState.live.resumeNeedsHardSync = false;
+    } else if (!workletReady) {
+      console.log(
+        `[audio] transport DROPPED — worklet not ready | node=${!!audioState.live.songWorkletNode} workletReady=${audioState.live.songWorkletReady} loadedVer=${audioState.live.songLoadedBufferVersion} bufVer=${audioState.live.songBufferVersion}`,
+      );
+    }
   } else {
     audioState.live.oscillators.forEach(({ oscillator, ratio }) => {
       oscillator.frequency.cancelScheduledValues(context.currentTime);
@@ -1120,7 +1373,7 @@ function syncLiveMonitor(force = false) {
   if (force || statusKey !== audioState.live.lastStatusKey) {
     const message =
       sourceMode === "song"
-        ? `Live monitor: ${liveSourceLabel(sourceMode)} is running at ${playbackRate.toFixed(2)}x for ${perspectiveLabel(perspective)} (${formatFrequency(frequency)} at x = ${source.x.toFixed(1)} m).`
+        ? `Live monitor: uploaded song DSP is tracking ${perspectiveLabel(perspective)} at ${formatFrequency(frequency)} with the car at ${source.x.toFixed(1)} m.`
         : `Live monitor: ${perspectiveLabel(perspective)} hears ${formatFrequency(frequency)} from the ${liveSourceLabel(sourceMode)} with the car at ${source.x.toFixed(1)} m.`;
     updateLiveAudioStatus(message);
     audioState.live.lastStatusKey = statusKey;
@@ -1134,12 +1387,7 @@ async function startLiveMonitor() {
 
   audioState.live.active = true;
   liveAudioToggle.checked = true;
-  audioState.live.masterGain.gain.cancelScheduledValues(context.currentTime);
-  audioState.live.masterGain.gain.setValueAtTime(
-    audioState.live.masterGain.gain.value,
-    context.currentTime,
-  );
-  audioState.live.masterGain.gain.setTargetAtTime(1, context.currentTime, 0.04);
+  syncLiveMonitorPlaybackState();
   syncLiveMonitor(true);
 }
 
@@ -1151,6 +1399,8 @@ function stopLiveMonitor() {
   const context = getAudioContext();
   audioState.live.active = false;
   audioState.live.lastStatusKey = "";
+  audioState.live.lastSongTransportKey = "";
+  audioState.live.resumeNeedsHardSync = false;
   liveAudioToggle.checked = false;
   audioState.live.masterGain.gain.cancelScheduledValues(context.currentTime);
   audioState.live.masterGain.gain.setValueAtTime(
@@ -1158,10 +1408,7 @@ function stopLiveMonitor() {
     context.currentTime,
   );
   audioState.live.masterGain.gain.setTargetAtTime(0, context.currentTime, 0.04);
-  if (audioState.live.songElement && !audioState.live.songElement.paused) {
-    audioState.live.songElement.pause();
-    audioState.live.songElement.currentTime = 0;
-  }
+  resetLiveSongProcessor();
   updateLiveAudioStatus(
     "Live monitor stopped. Start it again to hear the current graph position.",
   );
@@ -1182,11 +1429,16 @@ async function handleLiveSourceModeChange() {
 
   try {
     await setLiveMonitorSourceMode(sourceMode);
+    if (sourceMode === "song") {
+      requestLiveSongHardSync("start live monitor");
+    }
     syncLiveMonitor(true);
   } catch (error) {
     setCheckedRadioValue("live-source-mode", previousMode);
     updateLiveAudioStatus(
-      "Upload a clip first before switching the live monitor to the song.",
+      error.message === "unsupported-live-song"
+        ? "Live uploaded-song monitoring needs a modern desktop browser with AudioWorklet support."
+        : "Upload a clip first before switching the live monitor to the song.",
     );
   }
 }
@@ -1200,6 +1452,8 @@ async function toggleLiveMonitor() {
       updateLiveAudioStatus(
         error.message === "missing-song"
           ? "Upload a clip first, or switch the live monitor back to the synth tone."
+          : error.message === "unsupported-live-song"
+            ? "Live uploaded-song monitoring needs a modern desktop browser with AudioWorklet support."
           : "This browser blocked live audio startup. Try turning the live monitor on again.",
       );
     }
@@ -1337,23 +1591,18 @@ async function handleAudioUpload(event) {
     audioState.originalUrl = originalUrl;
     audioState.sourceBuffer = decodedBuffer;
     audioState.sourceName = file.name;
+    stageLiveSongBuffer(decodedBuffer);
     updateUploadUI();
     audioPlayers.original.src = originalUrl;
     audioPlayers.original.load();
 
-    if (audioState.live.songElement) {
-      syncSongMonitorSource();
-      if (audioState.live.active && audioState.live.sourceMode === "song") {
-        audioState.live.songElement.currentTime = 0;
-        try {
-          await audioState.live.songElement.play();
-        } catch (error) {
-          updateLiveAudioStatus(
-            "The new upload is loaded, but the browser blocked live song playback until you turn the live monitor on again.",
-          );
-        }
-        syncLiveMonitor(true);
-      }
+    if (audioState.live.songWorkletNode) {
+      await pushSongBufferToWorklet();
+    }
+
+    if (audioState.live.active && audioState.live.sourceMode === "song") {
+      requestLiveSongHardSync("song buffer reloaded");
+      syncLiveMonitor(true);
     }
 
     schedulePreviewRender(
@@ -1370,6 +1619,7 @@ async function handleAudioUpload(event) {
     }
     audioState.sourceBuffer = null;
     audioState.sourceName = "";
+    stageLiveSongBuffer(null);
     updateUploadUI();
     audioUpload.value = "";
     updateAudioStatus("Couldn't load audio.");
@@ -1379,8 +1629,7 @@ async function handleAudioUpload(event) {
 async function resetSimulation() {
   resetControlsToDefaults();
   state.progress = 0.5;
-  state.playing = true;
-  playToggle.textContent = "Pause";
+  setPlaybackState(true);
 
   setCheckedRadioValue("live-source-mode", "synth");
   setCheckedRadioValue("live-perspective", "target");
@@ -1411,17 +1660,25 @@ function render() {
   syncLiveMonitor();
 }
 
-function tick() {
+let lastTickTimestamp = null;
+
+function tick(timestamp) {
   if (state.playing) {
     const durationSeconds = (state.travelSpan * 2) / state.carSpeed;
-    const delta = 1 / Math.max(durationSeconds * 60, 1);
-    state.progress += delta;
 
-    if (state.progress >= 1) {
-      state.progress = 0;
+    if (lastTickTimestamp !== null) {
+      const elapsed = (timestamp - lastTickTimestamp) / 1000;
+      state.progress += elapsed / durationSeconds;
+
+      if (state.progress >= 1) {
+        state.progress -= Math.floor(state.progress);
+      }
     }
 
+    lastTickTimestamp = timestamp;
     render();
+  } else {
+    lastTickTimestamp = null;
   }
 
   requestAnimationFrame(tick);
@@ -1441,8 +1698,7 @@ sceneCanvas.addEventListener("pointerdown", (event) => {
   sceneDragState.wasPlaying = state.playing;
   sceneDragState.mode = dragTarget.mode;
   sceneCanvas.classList.add("dragging");
-  state.playing = false;
-  playToggle.textContent = "Play";
+  setPlaybackState(false);
   sceneCanvas.setPointerCapture(event.pointerId);
   if (dragTarget.mode === "car") {
     setProgressFromScenePoint(point);
@@ -1490,8 +1746,7 @@ sceneCanvas.addEventListener("lostpointercapture", () => {
 });
 
 playToggle.addEventListener("click", () => {
-  state.playing = !state.playing;
-  playToggle.textContent = state.playing ? "Pause" : "Play";
+  togglePlayback();
 });
 
 resetButton.addEventListener("click", () => {
@@ -1522,9 +1777,30 @@ document.querySelectorAll('input[name="live-perspective"]').forEach((input) => {
 });
 
 window.addEventListener("resize", render);
+document.addEventListener("themechange", () => {
+  syncThemeUI();
+  render();
+});
+
+window.addEventListener("keydown", (event) => {
+  if (
+    (event.code !== "Space" && event.key !== " " && event.key !== "Spacebar")
+    || event.repeat
+    || event.altKey
+    || event.ctrlKey
+    || event.metaKey
+    || shouldIgnoreSpacebarToggle(event.target)
+  ) {
+    return;
+  }
+
+  event.preventDefault();
+  togglePlayback();
+});
 
 buildControls();
 updateUploadUI();
 updatePreviewsVisibility();
+syncThemeUI();
 render();
-tick();
+requestAnimationFrame(tick);

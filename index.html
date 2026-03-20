@@ -4,6 +4,22 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Doppler Prank Lab</title>
+    <script>
+      (() => {
+        let theme = "light";
+
+        try {
+          const storedTheme = localStorage.getItem("theme");
+          theme =
+            storedTheme
+            || (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+        } catch (_error) {
+          theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+        }
+
+        document.documentElement.dataset.theme = theme;
+      })();
+    </script>
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
@@ -24,12 +40,27 @@
 
         <section class="panel viz-panel">
           <div class="panel-heading panel-hero">
-            <p class="eyebrow">Drive-by acoustics sandbox</p>
-            <h1>Doppler Prank Lab</h1>
-            <p class="intro">
-              Explore how a moving siren shifts in pitch, then compensate for that
-              shift at one chosen listener and see what everyone else hears.
-            </p>
+            <div class="hero-topbar">
+              <div>
+                <p class="eyebrow">Drive-by acoustics sandbox</p>
+                <h1>Doppler Prank Lab</h1>
+                <p class="intro">
+                  Explore how a moving siren shifts in pitch, then compensate for that
+                  shift at one chosen listener and see what everyone else hears.
+                </p>
+              </div>
+
+              <button
+                id="theme-toggle"
+                class="theme-toggle secondary"
+                type="button"
+                aria-label="Switch to dark mode"
+                aria-pressed="false"
+              >
+                <span class="theme-toggle-icon" aria-hidden="true">◐</span>
+                <span id="theme-toggle-label">Dark mode</span>
+              </button>
+            </div>
           </div>
 
           <div class="stats-grid" id="stats-grid"></div>
@@ -171,5 +202,61 @@
     </div>
 
     <script src="app.js"></script>
+    <script>
+      (() => {
+        function readTheme() {
+          return document.documentElement.dataset.theme === "dark" ? "dark" : "light";
+        }
+
+        function writeTheme(theme) {
+          const nextTheme = theme === "dark" ? "dark" : "light";
+          document.documentElement.dataset.theme = nextTheme;
+
+          try {
+            localStorage.setItem("theme", nextTheme);
+          } catch (_error) {
+            // Ignore storage issues and still apply the theme for this session.
+          }
+
+          const button = document.getElementById("theme-toggle");
+          const label = document.getElementById("theme-toggle-label");
+          const upcomingTheme = nextTheme === "dark" ? "light" : "dark";
+
+          if (button) {
+            button.setAttribute("aria-pressed", String(nextTheme === "dark"));
+            button.setAttribute("aria-label", `Switch to ${upcomingTheme} mode`);
+          }
+
+          if (label) {
+            label.textContent = upcomingTheme === "dark" ? "Dark mode" : "Light mode";
+          }
+
+          document.dispatchEvent(
+            new CustomEvent("themechange", {
+              detail: { theme: nextTheme },
+            }),
+          );
+        }
+
+        function toggleTheme() {
+          writeTheme(readTheme() === "dark" ? "light" : "dark");
+        }
+
+        window.__dopplerTheme = {
+          readTheme,
+          writeTheme,
+          toggleTheme,
+        };
+
+        window.addEventListener("DOMContentLoaded", () => {
+          const button = document.getElementById("theme-toggle");
+          if (button) {
+            button.addEventListener("click", toggleTheme);
+          }
+
+          writeTheme(readTheme());
+        });
+      })();
+    </script>
   </body>
 </html>

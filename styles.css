@@ -13,6 +13,87 @@
   --prank: #b18912;
   --grid: rgba(34, 23, 13, 0.08);
   --shadow: 0 20px 50px rgba(65, 44, 24, 0.08);
+  --button-text: #fff9f2;
+  --button-secondary: rgba(34, 23, 13, 0.12);
+  --toggle-track: rgba(34, 23, 13, 0.14);
+  --toggle-thumb: #fff9f2;
+  --radio-bg: rgba(34, 23, 13, 0.08);
+  --radio-border: rgba(34, 23, 13, 0.06);
+  --radio-active-bg: rgba(255, 255, 255, 0.94);
+  --radio-active-ink: var(--ink);
+  --card-border-soft: rgba(54, 36, 18, 0.08);
+  --card-border: rgba(54, 36, 18, 0.12);
+  --upload-border: rgba(54, 36, 18, 0.22);
+  --upload-bg: rgba(255, 255, 255, 0.52);
+  --scene-bg: #fbf6ef;
+  --scene-prank-line: rgba(177, 137, 18, 0.75);
+  --scene-bystander-line: rgba(52, 88, 184, 0.35);
+  --scene-rings: rgba(216, 93, 60, 0.14);
+  --canvas-card: rgba(255, 255, 255, 0.85);
+  --canvas-card-border: rgba(34, 23, 13, 0.1);
+  --canvas-axes: rgba(34, 23, 13, 0.16);
+  --canvas-grid: rgba(34, 23, 13, 0.08);
+  --canvas-cursor: rgba(34, 23, 13, 0.22);
+  --canvas-text: #22170d;
+  --canvas-muted: #6b5948;
+  --bg-accent-a: rgba(216, 93, 60, 0.14);
+  --bg-accent-b: rgba(20, 108, 99, 0.14);
+  --bg-top: #efe4d6;
+  --bg-bottom: #e9ddcf;
+  --frame-top: rgba(255, 255, 255, 0.58);
+  --frame-bottom: rgba(255, 255, 255, 0.14);
+  --frame-sheen: rgba(255, 255, 255, 0.14);
+  --frame-shadow: rgba(0, 0, 0, 0.03);
+  --icon-button-bg: rgba(34, 23, 13, 0.08);
+}
+
+:root[data-theme="dark"] {
+  --bg: #0f161d;
+  --paper: rgba(20, 28, 36, 0.8);
+  --panel: rgba(16, 24, 31, 0.88);
+  --border: rgba(188, 205, 219, 0.14);
+  --ink: #edf3f7;
+  --muted: #a6b5c2;
+  --road: #2c3640;
+  --road-edge: #8698a6;
+  --car: #ff8560;
+  --target: #4fd0c1;
+  --bystander: #82a7ff;
+  --prank: #f3c84d;
+  --grid: rgba(237, 243, 247, 0.09);
+  --shadow: 0 24px 60px rgba(0, 0, 0, 0.28);
+  --button-text: #091116;
+  --button-secondary: rgba(237, 243, 247, 0.12);
+  --toggle-track: rgba(237, 243, 247, 0.2);
+  --toggle-thumb: #f3f7fb;
+  --radio-bg: rgba(237, 243, 247, 0.09);
+  --radio-border: rgba(237, 243, 247, 0.06);
+  --radio-active-bg: rgba(255, 255, 255, 0.1);
+  --radio-active-ink: var(--ink);
+  --card-border-soft: rgba(188, 205, 219, 0.1);
+  --card-border: rgba(188, 205, 219, 0.14);
+  --upload-border: rgba(188, 205, 219, 0.24);
+  --upload-bg: rgba(255, 255, 255, 0.04);
+  --scene-bg: #101921;
+  --scene-prank-line: rgba(243, 200, 77, 0.82);
+  --scene-bystander-line: rgba(130, 167, 255, 0.42);
+  --scene-rings: rgba(255, 133, 96, 0.18);
+  --canvas-card: rgba(12, 19, 26, 0.88);
+  --canvas-card-border: rgba(237, 243, 247, 0.12);
+  --canvas-axes: rgba(237, 243, 247, 0.2);
+  --canvas-grid: rgba(237, 243, 247, 0.1);
+  --canvas-cursor: rgba(237, 243, 247, 0.22);
+  --canvas-text: #edf3f7;
+  --canvas-muted: #a6b5c2;
+  --bg-accent-a: rgba(255, 133, 96, 0.18);
+  --bg-accent-b: rgba(79, 208, 193, 0.12);
+  --bg-top: #131d25;
+  --bg-bottom: #0a1117;
+  --frame-top: rgba(255, 255, 255, 0.08);
+  --frame-bottom: rgba(255, 255, 255, 0.02);
+  --frame-sheen: rgba(255, 255, 255, 0.06);
+  --frame-shadow: rgba(0, 0, 0, 0.18);
+  --icon-button-bg: rgba(237, 243, 247, 0.08);
 }
 
 * {
@@ -28,10 +109,11 @@ body {
   min-height: 100vh;
   color: var(--ink);
   background:
-    radial-gradient(circle at top left, rgba(216, 93, 60, 0.14), transparent 30%),
-    radial-gradient(circle at top right, rgba(20, 108, 99, 0.14), transparent 26%),
-    linear-gradient(180deg, #efe4d6 0%, var(--bg) 55%, #e9ddcf 100%);
+    radial-gradient(circle at top left, var(--bg-accent-a), transparent 30%),
+    radial-gradient(circle at top right, var(--bg-accent-b), transparent 26%),
+    linear-gradient(180deg, var(--bg-top) 0%, var(--bg) 55%, var(--bg-bottom) 100%);
   font-family: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif;
+  transition: background 180ms ease, color 180ms ease;
 }
 
 button,
@@ -68,6 +150,13 @@ li {
   padding-bottom: 6px;
 }
 
+.hero-topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  gap: 20px;
+}
+
 .panel-hero h1 {
   margin: 0;
   font-size: clamp(2.2rem, 4vw, 4.2rem);
@@ -99,6 +188,7 @@ li {
   border-radius: 28px;
   box-shadow: var(--shadow);
   backdrop-filter: blur(10px);
+  transition: background 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
 }
 
 .controls-panel,
@@ -139,7 +229,7 @@ li {
   padding: 18px;
   border-radius: 22px;
   background: var(--paper);
-  border: 1px solid rgba(54, 36, 18, 0.08);
+  border: 1px solid var(--card-border-soft);
 }
 
 .live-audio-header {
@@ -184,7 +274,7 @@ li {
   width: 56px;
   height: 32px;
   border-radius: 999px;
-  background: rgba(34, 23, 13, 0.14);
+  background: var(--toggle-track);
   transition: background 160ms ease;
 }
 
@@ -196,7 +286,7 @@ li {
   width: 24px;
   height: 24px;
   border-radius: 999px;
-  background: #fff9f2;
+  background: var(--toggle-thumb);
   box-shadow: 0 3px 8px rgba(34, 23, 13, 0.16);
   transition: transform 160ms ease;
 }
@@ -230,9 +320,9 @@ li {
   display: flex;
   flex-wrap: wrap;
   border-radius: 0.8rem;
-  background: rgba(34, 23, 13, 0.08);
+  background: var(--radio-bg);
   box-sizing: border-box;
-  box-shadow: inset 0 0 0 1px rgba(34, 23, 13, 0.06);
+  box-shadow: inset 0 0 0 1px var(--radio-border);
   padding: 0.25rem;
   width: 100%;
   font-size: 14px;
@@ -261,8 +351,8 @@ li {
 }
 
 .radio-inputs .radio input:checked + .name {
-  background: rgba(255, 255, 255, 0.94);
-  color: var(--ink);
+  background: var(--radio-active-bg);
+  color: var(--radio-active-ink);
   font-weight: 600;
   box-shadow: 0 1px 2px rgba(34, 23, 13, 0.08);
 }
@@ -303,14 +393,27 @@ button {
   border-radius: 999px;
   padding: 10px 16px;
   background: var(--ink);
-  color: #fff9f2;
+  color: var(--button-text);
   cursor: pointer;
   font-weight: 700;
 }
 
 button.secondary {
-  background: rgba(34, 23, 13, 0.12);
+  background: var(--button-secondary);
   color: var(--ink);
+}
+
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  white-space: nowrap;
+  margin-top: 4px;
+}
+
+.theme-toggle-icon {
+  font-size: 1rem;
+  line-height: 1;
 }
 
 .control-groups {
@@ -322,7 +425,7 @@ button.secondary {
   padding: 16px;
   border-radius: 22px;
   background: var(--paper);
-  border: 1px solid rgba(54, 36, 18, 0.08);
+  border: 1px solid var(--card-border-soft);
 }
 
 .control-group h3 {
@@ -376,7 +479,7 @@ input[type="range"] {
   padding: 14px;
   border-radius: 18px;
   background: var(--paper);
-  border: 1px solid rgba(54, 36, 18, 0.08);
+  border: 1px solid var(--card-border-soft);
 }
 
 .stat-card .label {
@@ -395,10 +498,10 @@ input[type="range"] {
 .canvas-frame {
   overflow: hidden;
   border-radius: 24px;
-  border: 1px solid rgba(54, 36, 18, 0.08);
+  border: 1px solid var(--card-border-soft);
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.58), rgba(255, 255, 255, 0.14)),
-    linear-gradient(135deg, rgba(255, 255, 255, 0.14), rgba(0, 0, 0, 0.03));
+    linear-gradient(180deg, var(--frame-top), var(--frame-bottom)),
+    linear-gradient(135deg, var(--frame-sheen), var(--frame-shadow));
 }
 
 .chart-frame {
@@ -424,7 +527,7 @@ input[type="range"] {
   width: 100%;
   padding: 12px 14px;
   border-radius: 16px;
-  border: 1px dashed rgba(54, 36, 18, 0.22);
+  border: 1px dashed var(--upload-border);
   background: var(--paper);
   color: var(--ink);
 }
@@ -437,8 +540,8 @@ input[type="range"] {
   gap: 12px;
   padding: 12px 14px;
   border-radius: 16px;
-  border: 1px solid rgba(54, 36, 18, 0.12);
-  background: rgba(255, 255, 255, 0.52);
+  border: 1px solid var(--card-border);
+  background: var(--upload-bg);
 }
 
 .uploaded-audio-meta {
@@ -464,7 +567,7 @@ input[type="range"] {
   width: 40px;
   height: 40px;
   padding: 0;
-  background: rgba(34, 23, 13, 0.08);
+  background: var(--icon-button-bg);
   color: var(--ink);
 }
 
@@ -584,6 +687,16 @@ canvas {
 
   .stats-grid {
     grid-template-columns: 1fr 1fr;
+  }
+
+  .hero-topbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .theme-toggle {
+    width: 100%;
+    justify-content: center;
   }
 
   .live-audio-header {
