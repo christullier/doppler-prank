@@ -169,7 +169,12 @@ const sceneDragState = {
   active: false,
   pointerId: null,
   wasPlaying: false,
+  mode: null,
 };
+
+const controlItemsByKey = Object.fromEntries(
+  controls.flatMap((group) => group.items.map((item) => [item.key, item])),
+);
 
 function formatNumber(value, unit, digits = 1) {
   return `${value.toFixed(digits)} ${unit}`;
@@ -364,6 +369,27 @@ function buildControls() {
   });
 }
 
+function syncControlUI(key) {
+  const item = controlItemsByKey[key];
+  if (!item) {
+    return;
+  }
+
+  const input = document.getElementById(key);
+  if (input) {
+    input.value = String(state[key]);
+  }
+
+  const value = document.getElementById(`${key}-value`);
+  if (value) {
+    value.textContent = formatNumber(
+      state[key],
+      item.unit,
+      item.step < 1 ? 1 : 0,
+    );
+  }
+}
+
 function resizeCanvas(canvas) {
   const ratio = window.devicePixelRatio || 1;
   const width = Math.floor(canvas.clientWidth * ratio);
@@ -525,6 +551,19 @@ function sceneLayout() {
   };
 }
 
+function unmapPoint(point, bounds, width, height, padding) {
+  const xPadding = typeof padding === "number" ? padding : padding.x;
+  const topPadding = typeof padding === "number" ? padding : padding.top;
+  const bottomPadding = typeof padding === "number" ? padding : padding.bottom;
+  const usableWidth = width - xPadding * 2;
+  const usableHeight = height - topPadding - bottomPadding;
+
+  return {
+    x: bounds.left + ((point.x - xPadding) / Math.max(usableWidth, 1)) * (bounds.right - bounds.left),
+    y: ((height - bottomPadding - point.y) / Math.max(usableHeight, 1)) * bounds.top,
+  };
+}
+
 function mapPoint(point, bounds, width, height, padding) {
   const xPadding = typeof padding === "number" ? padding : padding.x;
   const topPadding = typeof padding === "number" ? padding : padding.top;
@@ -663,11 +702,49 @@ function isScenePointNearCar(point) {
   return Math.hypot(point.x - carPoint.x, point.y - carPoint.y) <= 24 * ratio;
 }
 
+function draggableSceneTarget(point) {
+  const { width, height, bounds, padding } = sceneLayout();
+  const ratio = window.devicePixelRatio || 1;
+  const hitRadius = 24 * ratio;
+  const targets = [
+    {
+      mode: "car",
+      point: mapPoint(getSourcePosition(state.progress), bounds, width, height, padding),
+    },
+    {
+      mode: "target",
+      point: mapPoint(getListener("target"), bounds, width, height, padding),
+    },
+    {
+      mode: "bystander",
+      point: mapPoint(getListener("bystander"), bounds, width, height, padding),
+    },
+  ];
+
+  return (
+    targets.find((target) => Math.hypot(point.x - target.point.x, point.y - target.point.y) <= hitRadius) || null
+  );
+}
+
 function setProgressFromScenePoint(point) {
   const { width, padding } = sceneLayout();
   const usableWidth = Math.max(width - padding.x * 2, 1);
   const normalized = (point.x - padding.x) / usableWidth;
   state.progress = clamp(normalized, 0, 1);
+}
+
+function updateListenerFromScenePoint(name, point) {
+  const { width, height, bounds, padding } = sceneLayout();
+  const worldPoint = unmapPoint(point, bounds, width, height, padding);
+  const xKey = `${name}X`;
+  const yKey = `${name}Y`;
+  const xItem = controlItemsByKey[xKey];
+  const yItem = controlItemsByKey[yKey];
+
+  state[xKey] = clamp(worldPoint.x, xItem.min, xItem.max);
+  state[yKey] = clamp(worldPoint.y, yItem.min, yItem.max);
+  syncControlUI(xKey);
+  syncControlUI(yKey);
 }
 
 function finishSceneDrag() {
@@ -677,6 +754,7 @@ function finishSceneDrag() {
 
   sceneDragState.active = false;
   sceneDragState.pointerId = null;
+  sceneDragState.mode = null;
   sceneCanvas.classList.remove("dragging");
   state.playing = sceneDragState.wasPlaying;
   playToggle.textContent = state.playing ? "Pause" : "Play";
@@ -1353,18 +1431,25 @@ sceneCanvas.addEventListener("pointerdown", (event) => {
   resizeCanvas(sceneCanvas);
 
   const point = sceneEventPoint(event);
-  if (!isScenePointNearCar(point)) {
+  const dragTarget = draggableSceneTarget(point);
+  if (!dragTarget) {
     return;
   }
 
   sceneDragState.active = true;
   sceneDragState.pointerId = event.pointerId;
   sceneDragState.wasPlaying = state.playing;
+  sceneDragState.mode = dragTarget.mode;
   sceneCanvas.classList.add("dragging");
   state.playing = false;
   playToggle.textContent = "Play";
   sceneCanvas.setPointerCapture(event.pointerId);
-  setProgressFromScenePoint(point);
+  if (dragTarget.mode === "car") {
+    setProgressFromScenePoint(point);
+  } else {
+    updateListenerFromScenePoint(dragTarget.mode, point);
+    markAudioDirty();
+  }
   render();
   event.preventDefault();
 });
@@ -1374,7 +1459,13 @@ sceneCanvas.addEventListener("pointermove", (event) => {
     return;
   }
 
-  setProgressFromScenePoint(sceneEventPoint(event));
+  const point = sceneEventPoint(event);
+  if (sceneDragState.mode === "car") {
+    setProgressFromScenePoint(point);
+  } else if (sceneDragState.mode) {
+    updateListenerFromScenePoint(sceneDragState.mode, point);
+    markAudioDirty();
+  }
   render();
 });
 
