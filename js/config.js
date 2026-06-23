@@ -1,3 +1,6 @@
+// Only the Car speed slider is shown. Every other parameter keeps its metadata
+// (so the simulation and scene-drag bounds still work) but is marked `hidden`
+// and stays fixed at its default value — buildControls() skips hidden items.
 const controls = [
   {
     title: "Pass",
@@ -10,6 +13,7 @@ const controls = [
         step: 1,
         value: 343,
         unit: "m/s",
+        hidden: true,
       },
       {
         key: "carSpeed",
@@ -28,6 +32,7 @@ const controls = [
         step: 1,
         value: 120,
         unit: "m",
+        hidden: true,
       },
     ],
   },
@@ -42,6 +47,7 @@ const controls = [
         step: 1,
         value: 700,
         unit: "Hz",
+        hidden: true,
       },
       {
         key: "targetFrequency",
@@ -51,6 +57,7 @@ const controls = [
         step: 1,
         value: 700,
         unit: "Hz",
+        hidden: true,
       },
     ],
   },
@@ -65,6 +72,7 @@ const controls = [
         step: 1,
         value: 0,
         unit: "m",
+        hidden: true,
       },
       {
         key: "targetY",
@@ -74,6 +82,7 @@ const controls = [
         step: 0.5,
         value: 10,
         unit: "m",
+        hidden: true,
       },
     ],
   },
@@ -88,6 +97,7 @@ const controls = [
         step: 1,
         value: 16,
         unit: "m",
+        hidden: true,
       },
       {
         key: "bystanderY",
@@ -97,6 +107,7 @@ const controls = [
         step: 0.5,
         value: 16,
         unit: "m",
+        hidden: true,
       },
     ],
   },

@@ -49,6 +49,11 @@ function buildControls() {
   controlGroups.innerHTML = "";
 
   controls.forEach((group) => {
+    const visibleItems = group.items.filter((item) => !item.hidden);
+    if (visibleItems.length === 0) {
+      return;
+    }
+
     const groupElement = document.createElement("section");
     groupElement.className = "control-group";
 
@@ -56,7 +61,7 @@ function buildControls() {
     title.textContent = group.title;
     groupElement.appendChild(title);
 
-    group.items.forEach((item) => {
+    visibleItems.forEach((item) => {
       if (state.audioEffectMode === "normal" && item.key === "targetFrequency") {
         return;
       }
