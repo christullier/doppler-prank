@@ -3,6 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" href="data:," />
     <title>Doppler Prank Lab</title>
     <script>
       (() => {
@@ -118,8 +119,12 @@
               <span>Live source</span>
               <div class="radio-inputs" role="radiogroup" aria-label="Live source">
                 <label class="radio">
-                  <input id="live-source-synth" type="radio" name="live-source-mode" value="synth" checked />
+                  <input id="live-source-synth" type="radio" name="live-source-mode" value="synth" />
                   <span class="name">Tone</span>
+                </label>
+                <label class="radio">
+                  <input id="live-source-siren" type="radio" name="live-source-mode" value="siren" checked />
+                  <span class="name">Siren</span>
                 </label>
                 <label class="radio">
                   <input id="live-source-song" type="radio" name="live-source-mode" value="song" />
@@ -210,13 +215,13 @@
     </div>
 
     <script src="js/config.js"></script>
-    <script src="js/state.js"></script>
+    <script src="js/state.js?v=3"></script>
     <script src="js/dom.js"></script>
     <script src="js/utils.js"></script>
     <script src="js/simulation.js"></script>
-    <script src="js/audio.js"></script>
-    <script src="js/render.js"></script>
-    <script src="js/events.js"></script>
+    <script src="js/audio.js?v=3"></script>
+    <script src="js/render.js?v=3"></script>
+    <script src="js/events.js?v=3"></script>
     <script>
       (() => {
         function readTheme() {

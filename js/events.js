@@ -102,7 +102,9 @@ resetButton.addEventListener("click", () => {
 });
 
 audioUpload.addEventListener("change", handleAudioUpload);
-removeAudioButton.addEventListener("click", resetAudioState);
+removeAudioButton.addEventListener("click", () => {
+  void resetAudioState();
+});
 liveAudioToggle.addEventListener("change", () => {
   void toggleLiveMonitor();
 });
@@ -160,7 +162,9 @@ window.addEventListener("keydown", (event) => {
 });
 
 buildControls();
+setCheckedRadioValue("live-source-mode", audioState.live.sourceMode);
 updateUploadUI();
 syncThemeUI();
 render();
+void loadDefaultAudio();
 requestAnimationFrame(tick);

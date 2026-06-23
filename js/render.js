@@ -20,7 +20,7 @@ function updateSongProgressUI() {
 
   const showBar =
     audioState.live.active
-    && audioState.live.sourceMode === "song"
+    && audioState.live.sourceMode !== "synth"
     && audioState.live.songWorkletReady
     && audioState.sourceBuffer;
 

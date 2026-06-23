@@ -1,3 +1,10 @@
+const DEFAULT_AUDIO_URL = "audio/siren.wav";
+const DEFAULT_AUDIO_NAME = "siren.wav";
+
+function isDefaultAudioLoaded() {
+  return audioState.isDefaultAudio;
+}
+
 function getAudioContext() {
   if (!audioState.context) {
     const Context = window.AudioContext || window.webkitAudioContext;
@@ -21,16 +28,13 @@ function updateLiveAudioStatus(message) {
 }
 
 function updateUploadUI() {
-  const hasAudio = Boolean(audioState.sourceName);
+  const hasAudio = Boolean(audioState.uploadedBuffer);
 
   filePicker.hidden = hasAudio;
   uploadedAudio.hidden = !hasAudio;
   uploadedAudioName.textContent = hasAudio ? audioState.sourceName : "";
   liveSourceSongInput.disabled = !hasAudio;
-
-  if (!hasAudio && getLiveSourceMode() === "song") {
-    setCheckedRadioValue("live-source-mode", "synth");
-  }
+  removeAudioButton.hidden = !hasAudio;
 }
 
 function resetControlsToDefaults() {
@@ -39,31 +43,24 @@ function resetControlsToDefaults() {
   });
 }
 
-function resetAudioState() {
+async function resetAudioState() {
   audioState.uploadRequestId += 1;
-  audioState.sourceBuffer = null;
-  audioState.sourceName = "";
-  audioState.live.songAudioData = null;
-  audioState.live.songBufferVersion += 1;
-  audioState.live.songLoadedBufferVersion = 0;
-  audioState.live.songWorkletReady = false;
-  audioState.live.lastSongTransportKey = "";
-  audioState.live.resumeNeedsHardSync = false;
-  audioState.live.songPositionFraction = 0;
   audioUpload.value = "";
+  audioState.uploadedBuffer = null;
+  audioState.sourceName = "";
   updateUploadUI();
   updateAudioStatus("");
-  updateSongProgressUI();
 
-  if (audioState.live.songWorkletNode) {
-    audioState.live.songWorkletNode.port.postMessage({ type: "reset" });
-  }
-
-  if (audioState.live.active && audioState.live.sourceMode === "song") {
-    stopLiveMonitor();
-    updateLiveAudioStatus(
-      "The uploaded song was removed, so live monitoring switched off.",
-    );
+  if (getLiveSourceMode() === "song") {
+    setCheckedRadioValue("live-source-mode", "siren");
+    if (audioState.live.active) {
+      const requestId = audioState.live.requestId + 1;
+      audioState.live.requestId = requestId;
+      await setLiveMonitorSourceMode("siren", requestId);
+      syncLiveMonitor(true);
+    } else {
+      audioState.live.sourceMode = "siren";
+    }
   }
 }
 
@@ -198,7 +195,7 @@ async function ensureSongWorkletNode() {
 
   if (!audioState.live.songWorkletModulePromise) {
     audioState.live.songWorkletModulePromise = context.audioWorklet
-      .addModule("live-song-processor.js?v=2")
+      .addModule("live-song-processor.js?v=3")
       .catch((error) => {
         audioState.live.songWorkletModulePromise = null;
         throw error;
@@ -286,6 +283,10 @@ function perspectiveLabel(mode) {
 }
 
 function liveSourceLabel(mode) {
+  if (mode === "siren") {
+    return "ambulance siren";
+  }
+
   if (mode === "song") {
     return "uploaded song";
   }
@@ -294,7 +295,7 @@ function liveSourceLabel(mode) {
 }
 
 function getLiveSourceMode() {
-  return getCheckedRadioValue("live-source-mode") || "synth";
+  return getCheckedRadioValue("live-source-mode") || "siren";
 }
 
 function getLivePerspective() {
@@ -362,11 +363,16 @@ function ensureSynthMonitorNodes() {
 async function setLiveMonitorSourceMode(mode, requestId = audioState.live.requestId) {
   const context = ensureLiveMonitorBus();
 
-  if (mode === "song") {
-    if (!audioState.sourceBuffer) {
+  if (mode !== "synth") {
+    const nextBuffer = mode === "siren" ? audioState.sirenBuffer : audioState.uploadedBuffer;
+    if (!nextBuffer) {
       throw new Error("missing-song");
     }
 
+    if (audioState.sourceBuffer !== nextBuffer) {
+      audioState.sourceBuffer = nextBuffer;
+      stageLiveSongBuffer(nextBuffer);
+    }
     await ensureSongWorkletNode();
     if (requestId !== audioState.live.requestId) {
       return false;
@@ -377,7 +383,7 @@ async function setLiveMonitorSourceMode(mode, requestId = audioState.live.reques
     }
     audioState.live.synthGain.gain.setValueAtTime(0, context.currentTime);
     audioState.live.songGain.gain.setValueAtTime(1, context.currentTime);
-    requestLiveSongHardSync("source mode switched to song");
+    requestLiveSongHardSync(`source mode switched to ${mode}`);
     audioState.live.sourceMode = mode;
     updateSongProgressUI();
     return true;
@@ -415,7 +421,7 @@ function syncLiveMonitor(force = false, hardSeekOverride = null) {
   );
 
   audioState.live.perspective = perspective;
-  if (sourceMode === "song") {
+  if (sourceMode !== "synth") {
     const transportKey = [
       audioState.live.songBufferVersion,
       perspective,
@@ -468,8 +474,8 @@ function syncLiveMonitor(force = false, hardSeekOverride = null) {
   ].join(":");
   if (force || statusKey !== audioState.live.lastStatusKey) {
     const message =
-      sourceMode === "song"
-        ? `Live monitor: uploaded song DSP is tracking ${perspectiveLabel(perspective)} with ${effectModeLabel(state.audioEffectMode)} at ${formatFrequency(frequency)} with the car at ${source.x.toFixed(1)} m.`
+      sourceMode !== "synth"
+        ? `Live monitor: the ${liveSourceLabel(sourceMode)} is tracking ${perspectiveLabel(perspective)} with ${effectModeLabel(state.audioEffectMode)} at ${formatFrequency(frequency)} with the car at ${source.x.toFixed(1)} m.`
         : `Live monitor: ${perspectiveLabel(perspective)} hears ${formatFrequency(frequency)} from the ${liveSourceLabel(sourceMode)} with ${effectModeLabel(state.audioEffectMode)} and the car at ${source.x.toFixed(1)} m.`;
     updateLiveAudioStatus(message);
     audioState.live.lastStatusKey = statusKey;
@@ -542,7 +548,7 @@ async function handleLiveSourceModeChange() {
 
   if (!audioState.live.active) {
     const message =
-      sourceMode === "song" && !audioState.sourceBuffer
+      sourceMode === "song" && !audioState.uploadedBuffer
         ? "Upload a clip first, then start live monitoring to hear the song follow the graph."
         : `Live monitor is armed for the ${liveSourceLabel(sourceMode)} with ${effectModeLabel(state.audioEffectMode)}. Start it to hear the current graph position.`;
     updateLiveAudioStatus(message);
@@ -557,7 +563,7 @@ async function handleLiveSourceModeChange() {
     if (!didSwitchSource || requestId !== audioState.live.requestId) {
       return;
     }
-    if (sourceMode === "song") {
+    if (sourceMode !== "synth") {
       requestLiveSongHardSync("start live monitor");
     }
     syncLiveMonitor(true);
@@ -606,13 +612,85 @@ async function toggleLiveMonitor() {
   stopLiveMonitor();
 }
 
+async function applySourceBuffer(decodedBuffer, name, requestId = null, isDefault = false) {
+  if (requestId !== null && requestId !== audioState.uploadRequestId) {
+    return false;
+  }
+
+  if (isDefault) {
+    audioState.sirenBuffer = decodedBuffer;
+    audioState.isDefaultAudio = true;
+  } else {
+    audioState.uploadedBuffer = decodedBuffer;
+    audioState.sourceName = name;
+  }
+  updateUploadUI();
+  updateSongProgressUI();
+
+  const sourceMode = audioState.live.sourceMode;
+  const shouldActivate = (isDefault && sourceMode === "siren") || (!isDefault && sourceMode === "song");
+  if (shouldActivate) {
+    audioState.sourceBuffer = decodedBuffer;
+    stageLiveSongBuffer(decodedBuffer);
+  }
+
+  if (shouldActivate && audioState.live.songWorkletNode) {
+    await pushSongBufferToWorklet();
+    if (requestId !== null && requestId !== audioState.uploadRequestId) {
+      return false;
+    }
+  }
+
+  if (shouldActivate && audioState.live.active) {
+    requestLiveSongHardSync("song buffer reloaded");
+    syncLiveMonitor(true);
+  }
+
+  return true;
+}
+
+async function loadDefaultAudio({ statusMessage } = {}) {
+  liveAudioToggle.disabled = true;
+  const requestId = audioState.uploadRequestId;
+  try {
+    const response = await fetch(DEFAULT_AUDIO_URL);
+    if (!response.ok) {
+      throw new Error(`fetch failed: ${response.status}`);
+    }
+
+    const arrayBuffer = await response.arrayBuffer();
+    const context = getAudioContext();
+    const decodedBuffer = await context.decodeAudioData(arrayBuffer.slice(0));
+    const applied = await applySourceBuffer(decodedBuffer, DEFAULT_AUDIO_NAME, requestId, true);
+    if (applied) {
+      updateAudioStatus(
+        statusMessage || `${DEFAULT_AUDIO_NAME} is ready for live monitoring.`,
+      );
+    }
+  } catch (_error) {
+    audioState.sirenBuffer = null;
+    audioState.isDefaultAudio = false;
+    updateUploadUI();
+    updateSongProgressUI();
+    setCheckedRadioValue("live-source-mode", "synth");
+    audioState.live.sourceMode = "synth";
+    if (audioState.live.active) {
+      stopLiveMonitor();
+      updateLiveAudioStatus("Couldn't load the default audio, so live monitoring was stopped.");
+    }
+    updateAudioStatus("Couldn't load the default siren audio.");
+  } finally {
+    liveAudioToggle.disabled = false;
+  }
+}
+
 async function handleAudioUpload(event) {
   const [file] = event.target.files || [];
   const requestId = audioState.uploadRequestId + 1;
   audioState.uploadRequestId = requestId;
 
   if (!file) {
-    resetAudioState();
+    await resetAudioState();
     return;
   }
 
@@ -629,22 +707,9 @@ async function handleAudioUpload(event) {
       return;
     }
 
-    audioState.sourceBuffer = decodedBuffer;
-    audioState.sourceName = file.name;
-    stageLiveSongBuffer(decodedBuffer);
-    updateUploadUI();
-    updateSongProgressUI();
-
-    if (audioState.live.songWorkletNode) {
-      await pushSongBufferToWorklet();
-      if (requestId !== audioState.uploadRequestId) {
-        return;
-      }
-    }
-
-    if (audioState.live.active && audioState.live.sourceMode === "song") {
-      requestLiveSongHardSync("song buffer reloaded");
-      syncLiveMonitor(true);
+    const applied = await applySourceBuffer(decodedBuffer, file.name, requestId);
+    if (!applied) {
+      return;
     }
     updateAudioStatus(`${file.name} is ready for live song monitoring.`);
   } catch (error) {
@@ -657,9 +722,8 @@ async function handleAudioUpload(event) {
         "That upload could not be used for live song monitoring, so the live monitor was stopped.",
       );
     }
-    audioState.sourceBuffer = null;
+    audioState.uploadedBuffer = null;
     audioState.sourceName = "";
-    stageLiveSongBuffer(null);
     updateUploadUI();
     updateSongProgressUI();
     audioUpload.value = "";
@@ -676,18 +740,22 @@ async function resetSimulation() {
   setPlaybackState(true);
 
   setCheckedRadioValue("audio-effect-mode", "prank");
-  setCheckedRadioValue("live-source-mode", "synth");
+  setCheckedRadioValue("live-source-mode", "siren");
   setCheckedRadioValue("live-perspective", "target");
   showNormalLocusToggle.checked = false;
   circularTrackToggle.checked = false;
 
+  if (!isDefaultAudioLoaded()) {
+    await loadDefaultAudio();
+  }
+
   if (audioState.live.active) {
     const requestId = audioState.live.requestId + 1;
     audioState.live.requestId = requestId;
-    await setLiveMonitorSourceMode("synth", requestId);
+    await setLiveMonitorSourceMode(getLiveSourceMode(), requestId);
     syncLiveMonitor(true);
   } else {
-    audioState.live.sourceMode = "synth";
+    audioState.live.sourceMode = getLiveSourceMode();
     audioState.live.perspective = "target";
   }
 
