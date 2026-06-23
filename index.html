@@ -24,7 +24,7 @@
         document.documentElement.dataset.theme = theme;
       })();
     </script>
-    <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="styles.css?v=2" />
   </head>
   <body>
     <div class="page-shell">
@@ -39,7 +39,7 @@
 
               <div class="hero-actions" aria-label="Display and audio controls">
                 <label class="live-toggle hero-action audio-monitor-toggle" for="live-audio-toggle" title="Live monitor">
-                  <input id="live-audio-toggle" type="checkbox" aria-label="Live monitor" />
+                  <input id="live-audio-toggle" type="checkbox" aria-label="Live monitor" data-live-audio-toggle />
                   <span class="audio-icon audio-icon-off" aria-hidden="true">
                     <svg viewBox="0 0 24 24">
                       <path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor" />
@@ -156,6 +156,22 @@
                   <div>
                     <h3>Live Monitor</h3>
                   </div>
+                  <label class="live-toggle hero-action audio-monitor-toggle sheet-live-audio-toggle" for="live-audio-toggle-panel" title="Live monitor">
+                    <input id="live-audio-toggle-panel" type="checkbox" aria-label="Live monitor" data-live-audio-toggle />
+                    <span class="audio-icon audio-icon-off" aria-hidden="true">
+                      <svg viewBox="0 0 24 24">
+                        <path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor" />
+                        <path d="M17 9l4 4m0-4l-4 4" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="2" />
+                      </svg>
+                    </span>
+                    <span class="audio-icon audio-icon-on" aria-hidden="true">
+                      <svg viewBox="0 0 24 24">
+                        <path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor" />
+                        <path d="M17 8c1.2 1 2 2.5 2 4s-.8 3-2 4M19.5 5.5A8.7 8.7 0 0 1 23 12a8.7 8.7 0 0 1-3.5 6.5" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="2" />
+                      </svg>
+                    </span>
+                    <span class="sr-only">Live monitor</span>
+                  </label>
                 </div>
 
                 <div class="live-monitor-field">
@@ -268,13 +284,13 @@
     </div>
 
     <script src="js/config.js"></script>
-    <script src="js/state.js?v=3"></script>
-    <script src="js/dom.js"></script>
+    <script src="js/state.js?v=6"></script>
+    <script src="js/dom.js?v=2"></script>
     <script src="js/utils.js"></script>
     <script src="js/simulation.js"></script>
-    <script src="js/audio.js?v=3"></script>
-    <script src="js/render.js?v=4"></script>
-    <script src="js/events.js?v=3"></script>
+    <script src="js/audio.js?v=6"></script>
+    <script src="js/render.js?v=5"></script>
+    <script src="js/events.js?v=5"></script>
     <script src="js/mobile.js"></script>
     <script>
       (() => {

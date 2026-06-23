@@ -105,8 +105,10 @@ audioUpload.addEventListener("change", handleAudioUpload);
 removeAudioButton.addEventListener("click", () => {
   void resetAudioState();
 });
-liveAudioToggle.addEventListener("change", () => {
-  void toggleLiveMonitor();
+liveAudioToggles.forEach((toggle) => {
+  toggle.addEventListener("change", (event) => {
+    void toggleLiveMonitor(event.currentTarget.checked);
+  });
 });
 document.querySelectorAll('input[name="audio-effect-mode"]').forEach((input) => {
   input.addEventListener("change", () => {
@@ -166,5 +168,5 @@ setCheckedRadioValue("live-source-mode", audioState.live.sourceMode);
 updateUploadUI();
 syncThemeUI();
 render();
-void loadDefaultAudio();
+preloadDefaultAudio();
 requestAnimationFrame(tick);

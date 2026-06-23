@@ -1,5 +1,6 @@
-const DEFAULT_AUDIO_URL = "audio/siren.wav";
-const DEFAULT_AUDIO_NAME = "siren.wav";
+const DEFAULT_AUDIO_URL = "audio/ambulance-siren.wav";
+const DEFAULT_AUDIO_NAME = "ambulance-siren.wav";
+const AUDIO_CONTEXT_RESUME_TIMEOUT_MS = 2500;
 
 function isDefaultAudioLoaded() {
   return audioState.isDefaultAudio;
@@ -35,6 +36,65 @@ function updateUploadUI() {
   uploadedAudioName.textContent = hasAudio ? audioState.sourceName : "";
   liveSourceSongInput.disabled = !hasAudio;
   removeAudioButton.hidden = !hasAudio;
+}
+
+function updateLiveMonitorToggleUI() {
+  liveAudioToggles.forEach((toggle) => {
+    toggle.checked = audioState.live.active;
+    toggle.disabled = audioState.live.starting;
+  });
+}
+
+function fetchDefaultAudioData() {
+  if (audioState.defaultAudioArrayBuffer) {
+    return Promise.resolve(audioState.defaultAudioArrayBuffer.slice(0));
+  }
+
+  if (!audioState.defaultAudioFetchPromise) {
+    audioState.defaultAudioFetchPromise = fetch(DEFAULT_AUDIO_URL)
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error(`fetch failed: ${response.status}`);
+        }
+        return response.arrayBuffer();
+      })
+      .then((arrayBuffer) => {
+        audioState.defaultAudioArrayBuffer = arrayBuffer;
+        return arrayBuffer.slice(0);
+      })
+      .catch((error) => {
+        audioState.defaultAudioFetchPromise = null;
+        throw error;
+      });
+  }
+
+  return audioState.defaultAudioFetchPromise.then((arrayBuffer) => arrayBuffer.slice(0));
+}
+
+function preloadDefaultAudio() {
+  void fetchDefaultAudioData().catch(() => {
+    audioState.defaultAudioArrayBuffer = null;
+  });
+}
+
+async function resumeAudioContext(context) {
+  if (context.state === "running") {
+    return;
+  }
+
+  const didResume = await Promise.race([
+    context.resume().then(
+      () => true,
+      () => false,
+    ),
+    new Promise((resolve) => {
+      window.setTimeout(() => resolve(false), AUDIO_CONTEXT_RESUME_TIMEOUT_MS);
+    }),
+  ]);
+
+  if (!didResume || context.state !== "running") {
+    throw new Error("audio-context-blocked");
+  }
 }
 
 function resetControlsToDefaults() {
@@ -120,9 +180,11 @@ function resetLiveSongLoadResolvers(reason = "Live song buffer load was interrup
 }
 
 function stageLiveSongBuffer(buffer) {
+  stopFallbackSongSource();
   audioState.live.songBufferVersion += 1;
   audioState.live.songLoadedBufferVersion = 0;
   audioState.live.songWorkletReady = false;
+  audioState.live.songFallbackReady = false;
   audioState.live.songAudioData = buffer ? serializeSourceBuffer(buffer) : null;
   audioState.live.lastSongTransportKey = "";
   audioState.live.resumeNeedsHardSync = true;
@@ -138,11 +200,13 @@ function requestLiveSongHardSync(reason = "unknown") {
 
 function resetLiveSongProcessor() {
   if (!audioState.live.songWorkletNode) {
+    stopFallbackSongSource();
     return;
   }
 
   audioState.live.songWorkletNode.port.postMessage({ type: "reset" });
   audioState.live.lastSongTransportKey = "";
+  stopFallbackSongSource();
 }
 
 function handleLiveSongProcessorMessage(event) {
@@ -270,6 +334,142 @@ async function pushSongBufferToWorklet() {
   await loadPromise;
 }
 
+function updateFallbackSongPosition(context = getAudioContext()) {
+  const buffer = audioState.sourceBuffer;
+  if (!buffer || !buffer.duration) {
+    audioState.live.songPositionFraction = 0;
+    return;
+  }
+
+  if (audioState.live.songFallbackPlaying && audioState.live.songFallbackSource) {
+    const elapsed = Math.max(0, context.currentTime - audioState.live.songFallbackStartedAt);
+    const position = (
+      audioState.live.songFallbackOffset
+      + elapsed * audioState.live.songFallbackRate
+    ) % buffer.duration;
+    audioState.live.songPositionFraction = position / buffer.duration;
+    return;
+  }
+
+  audioState.live.songPositionFraction =
+    (audioState.live.songFallbackOffset % buffer.duration) / buffer.duration;
+}
+
+function stopFallbackSongSource({ keepPosition = false } = {}) {
+  if (audioState.live.songFallbackSource) {
+    if (keepPosition) {
+      updateFallbackSongPosition();
+      if (audioState.sourceBuffer?.duration) {
+        audioState.live.songFallbackOffset =
+          audioState.live.songPositionFraction * audioState.sourceBuffer.duration;
+      }
+    }
+
+    try {
+      audioState.live.songFallbackSource.stop();
+    } catch (_error) {
+      // Already stopped.
+    }
+    audioState.live.songFallbackSource.disconnect();
+  }
+
+  audioState.live.songFallbackSource = null;
+  audioState.live.songFallbackStartedAt = 0;
+  audioState.live.songFallbackPlaying = false;
+
+  if (!keepPosition) {
+    audioState.live.songFallbackOffset = 0;
+    audioState.live.songPositionFraction = 0;
+  }
+}
+
+function startFallbackSongSource(context, playbackRate) {
+  if (!audioState.sourceBuffer) {
+    throw new Error("missing-song");
+  }
+
+  stopFallbackSongSource({ keepPosition: true });
+
+  const source = context.createBufferSource();
+  const duration = audioState.sourceBuffer.duration || 0;
+  const offset = duration
+    ? audioState.live.songFallbackOffset % duration
+    : 0;
+
+  source.buffer = audioState.sourceBuffer;
+  source.loop = true;
+  source.playbackRate.setValueAtTime(playbackRate, context.currentTime);
+  source.connect(audioState.live.songGain);
+  source.start(context.currentTime, offset);
+
+  audioState.live.songFallbackSource = source;
+  audioState.live.songFallbackStartedAt = context.currentTime;
+  audioState.live.songFallbackOffset = offset;
+  audioState.live.songFallbackRate = playbackRate;
+  audioState.live.songFallbackPlaying = true;
+  audioState.live.songFallbackReady = true;
+}
+
+function syncFallbackSongTransport(context, playbackRate, force = false) {
+  if (!audioState.live.songFallbackReady || !audioState.sourceBuffer) {
+    return false;
+  }
+
+  if (!state.playing) {
+    if (audioState.live.songFallbackPlaying) {
+      stopFallbackSongSource({ keepPosition: true });
+    }
+    updateFallbackSongPosition(context);
+    return true;
+  }
+
+  if (!audioState.live.songFallbackSource) {
+    startFallbackSongSource(context, playbackRate);
+    updateFallbackSongPosition(context);
+    return true;
+  }
+
+  if (force || Math.abs(audioState.live.songFallbackRate - playbackRate) > 0.001) {
+    updateFallbackSongPosition(context);
+    if (audioState.sourceBuffer?.duration) {
+      audioState.live.songFallbackOffset =
+        audioState.live.songPositionFraction * audioState.sourceBuffer.duration;
+    }
+    audioState.live.songFallbackStartedAt = context.currentTime;
+    audioState.live.songFallbackSource.playbackRate.cancelScheduledValues(context.currentTime);
+    audioState.live.songFallbackSource.playbackRate.setTargetAtTime(
+      playbackRate,
+      context.currentTime,
+      0.02,
+    );
+    audioState.live.songFallbackRate = playbackRate;
+  }
+
+  updateFallbackSongPosition(context);
+  return true;
+}
+
+async function ensureBufferedSongMonitorNode() {
+  const context = ensureLiveMonitorBus();
+
+  if (!context.audioWorklet || typeof AudioWorkletNode === "undefined") {
+    audioState.live.songWorkletReady = false;
+    audioState.live.songFallbackReady = true;
+    return "fallback";
+  }
+
+  try {
+    await ensureSongWorkletNode();
+    audioState.live.songFallbackReady = false;
+    return "worklet";
+  } catch (error) {
+    console.warn("[audio] AudioWorklet unavailable; using buffer-source fallback.", error);
+    audioState.live.songWorkletReady = false;
+    audioState.live.songFallbackReady = true;
+    return "fallback";
+  }
+}
+
 function perspectiveLabel(mode) {
   if (mode === "car") {
     return "the car";
@@ -373,13 +573,17 @@ async function setLiveMonitorSourceMode(mode, requestId = audioState.live.reques
       audioState.sourceBuffer = nextBuffer;
       stageLiveSongBuffer(nextBuffer);
     }
-    await ensureSongWorkletNode();
+    const songBackend = await ensureBufferedSongMonitorNode();
     if (requestId !== audioState.live.requestId) {
       return false;
     }
-    await pushSongBufferToWorklet();
-    if (requestId !== audioState.live.requestId) {
-      return false;
+    if (songBackend === "worklet") {
+      await pushSongBufferToWorklet();
+      if (requestId !== audioState.live.requestId) {
+        return false;
+      }
+    } else {
+      audioState.live.songFallbackReady = true;
     }
     audioState.live.synthGain.gain.setValueAtTime(0, context.currentTime);
     audioState.live.songGain.gain.setValueAtTime(1, context.currentTime);
@@ -448,6 +652,10 @@ function syncLiveMonitor(force = false, hardSeekOverride = null) {
       });
       audioState.live.lastSongTransportKey = transportKey;
       audioState.live.resumeNeedsHardSync = false;
+    } else if (!workletReady && audioState.live.songFallbackReady) {
+      syncFallbackSongTransport(context, playbackRate, force);
+      audioState.live.lastSongTransportKey = transportKey;
+      audioState.live.resumeNeedsHardSync = false;
     } else if (!workletReady) {
       console.log(
         `[audio] transport DROPPED — worklet not ready | node=${!!audioState.live.songWorkletNode} workletReady=${audioState.live.songWorkletReady} loadedVer=${audioState.live.songLoadedBufferVersion} bufVer=${audioState.live.songBufferVersion}`,
@@ -499,9 +707,21 @@ async function handleAudioEffectModeChange() {
 
 async function startLiveMonitor(requestId) {
   const context = ensureLiveMonitorBus();
-  await context.resume();
+  updateLiveAudioStatus("Starting live monitor...");
+  await resumeAudioContext(context);
   if (requestId !== audioState.live.requestId) {
     return false;
+  }
+
+  if (getLiveSourceMode() === "siren" && !audioState.sirenBuffer) {
+    updateLiveAudioStatus(`Loading ${DEFAULT_AUDIO_NAME} before starting live monitoring...`);
+    const loadedDefaultAudio = await loadDefaultAudio();
+    if (requestId !== audioState.live.requestId) {
+      return false;
+    }
+    if (!loadedDefaultAudio || !audioState.sirenBuffer) {
+      throw new Error("missing-default-siren");
+    }
   }
 
   const didSwitchSource = await setLiveMonitorSourceMode(getLiveSourceMode(), requestId);
@@ -510,7 +730,7 @@ async function startLiveMonitor(requestId) {
   }
 
   audioState.live.active = true;
-  liveAudioToggle.checked = true;
+  updateLiveMonitorToggleUI();
   syncLiveMonitorPlaybackState();
   syncLiveMonitor(true);
   updateSongProgressUI();
@@ -518,17 +738,23 @@ async function startLiveMonitor(requestId) {
 }
 
 function stopLiveMonitor() {
+  audioState.live.requestId += 1;
+  audioState.live.active = false;
+  audioState.live.starting = false;
+  audioState.live.lastStatusKey = "";
+  audioState.live.lastSongTransportKey = "";
+  audioState.live.resumeNeedsHardSync = false;
+  updateLiveMonitorToggleUI();
+
   if (!audioState.live.masterGain) {
+    updateLiveAudioStatus(
+      "Live monitor stopped. Start it again to hear the current graph position.",
+    );
+    updateSongProgressUI();
     return;
   }
 
   const context = getAudioContext();
-  audioState.live.requestId += 1;
-  audioState.live.active = false;
-  audioState.live.lastStatusKey = "";
-  audioState.live.lastSongTransportKey = "";
-  audioState.live.resumeNeedsHardSync = false;
-  liveAudioToggle.checked = false;
   audioState.live.masterGain.gain.cancelScheduledValues(context.currentTime);
   audioState.live.masterGain.gain.setValueAtTime(
     audioState.live.masterGain.gain.value,
@@ -583,10 +809,18 @@ async function handleLiveSourceModeChange() {
   }
 }
 
-async function toggleLiveMonitor() {
-  if (liveAudioToggle.checked) {
+async function toggleLiveMonitor(nextChecked = liveAudioToggle.checked) {
+  if (audioState.live.starting) {
+    updateLiveMonitorToggleUI();
+    return;
+  }
+
+  if (nextChecked) {
     const requestId = audioState.live.requestId + 1;
     audioState.live.requestId = requestId;
+    audioState.live.starting = true;
+    updateLiveMonitorToggleUI();
+
     try {
       const started = await startLiveMonitor(requestId);
       if (!started) {
@@ -596,15 +830,23 @@ async function toggleLiveMonitor() {
       if (requestId !== audioState.live.requestId) {
         return;
       }
-      liveAudioToggle.checked = false;
       updateLiveAudioStatus(
         error.message === "missing-song"
           ? "Upload a clip first, or switch the live monitor back to the synth tone."
+          : error.message === "missing-default-siren"
+            ? "Couldn't load the default siren. Switch the live source to Tone, then try again."
+          : error.message === "audio-context-blocked"
+            ? "This browser did not allow audio to start. Try the live monitor again."
           : error.message === "unsupported-live-song"
             ? "Live uploaded-song monitoring needs a modern desktop browser with AudioWorklet support."
           : "This browser blocked live audio startup. Try turning the live monitor on again.",
       );
       updateSongProgressUI();
+    } finally {
+      if (requestId === audioState.live.requestId) {
+        audioState.live.starting = false;
+        updateLiveMonitorToggleUI();
+      }
     }
     return;
   }
@@ -650,38 +892,45 @@ async function applySourceBuffer(decodedBuffer, name, requestId = null, isDefaul
 }
 
 async function loadDefaultAudio({ statusMessage } = {}) {
-  liveAudioToggle.disabled = true;
-  const requestId = audioState.uploadRequestId;
-  try {
-    const response = await fetch(DEFAULT_AUDIO_URL);
-    if (!response.ok) {
-      throw new Error(`fetch failed: ${response.status}`);
-    }
-
-    const arrayBuffer = await response.arrayBuffer();
-    const context = getAudioContext();
-    const decodedBuffer = await context.decodeAudioData(arrayBuffer.slice(0));
-    const applied = await applySourceBuffer(decodedBuffer, DEFAULT_AUDIO_NAME, requestId, true);
-    if (applied) {
-      updateAudioStatus(
-        statusMessage || `${DEFAULT_AUDIO_NAME} is ready for live monitoring.`,
-      );
-    }
-  } catch (_error) {
-    audioState.sirenBuffer = null;
-    audioState.isDefaultAudio = false;
-    updateUploadUI();
-    updateSongProgressUI();
-    setCheckedRadioValue("live-source-mode", "synth");
-    audioState.live.sourceMode = "synth";
-    if (audioState.live.active) {
-      stopLiveMonitor();
-      updateLiveAudioStatus("Couldn't load the default audio, so live monitoring was stopped.");
-    }
-    updateAudioStatus("Couldn't load the default siren audio.");
-  } finally {
-    liveAudioToggle.disabled = false;
+  if (audioState.defaultAudioPromise) {
+    return audioState.defaultAudioPromise;
   }
+
+  audioState.isDefaultAudioLoading = true;
+  updateAudioStatus(`Loading ${DEFAULT_AUDIO_NAME}...`);
+
+  audioState.defaultAudioPromise = (async () => {
+    try {
+      const arrayBuffer = await fetchDefaultAudioData();
+      const context = getAudioContext();
+      const decodedBuffer = await context.decodeAudioData(arrayBuffer.slice(0));
+      const applied = await applySourceBuffer(decodedBuffer, DEFAULT_AUDIO_NAME, null, true);
+      if (applied) {
+        updateAudioStatus(
+          statusMessage || `${DEFAULT_AUDIO_NAME} is ready for live monitoring.`,
+        );
+      }
+      return applied;
+    } catch (_error) {
+      audioState.sirenBuffer = null;
+      audioState.isDefaultAudio = false;
+      updateUploadUI();
+      updateSongProgressUI();
+      setCheckedRadioValue("live-source-mode", "synth");
+      audioState.live.sourceMode = "synth";
+      if (audioState.live.active) {
+        stopLiveMonitor();
+        updateLiveAudioStatus("Couldn't load the default audio, so live monitoring was stopped.");
+      }
+      updateAudioStatus("Couldn't load the default siren audio.");
+      return false;
+    } finally {
+      audioState.isDefaultAudioLoading = false;
+      audioState.defaultAudioPromise = null;
+    }
+  })();
+
+  return audioState.defaultAudioPromise;
 }
 
 async function handleAudioUpload(event) {

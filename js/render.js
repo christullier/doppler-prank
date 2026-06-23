@@ -21,7 +21,7 @@ function updateSongProgressUI() {
   const showBar =
     audioState.live.active
     && audioState.live.sourceMode !== "synth"
-    && audioState.live.songWorkletReady
+    && (audioState.live.songWorkletReady || audioState.live.songFallbackReady)
     && audioState.sourceBuffer;
 
   songProgressEl.hidden = !showBar;
@@ -412,30 +412,13 @@ function drawScene(snapshot) {
     "bystander",
   );
 
-  sceneContext.fillStyle = cssVar("--canvas-card");
-  sceneContext.strokeStyle = cssVar("--canvas-card-border");
-  sceneContext.lineWidth = 1;
-  sceneContext.beginPath();
-  sceneContext.roundRect(20, 20, 310, 104, 18);
-  sceneContext.fill();
-  sceneContext.stroke();
-
+  sceneContext.save();
+  sceneContext.globalAlpha = 0.5;
   sceneContext.fillStyle = cssVar("--canvas-text");
-  sceneContext.font = "700 15px Avenir Next, Segoe UI, sans-serif";
-  sceneContext.fillText("Current pass snapshot", 40, 48);
-  sceneContext.font = "500 13px Avenir Next, Segoe UI, sans-serif";
-  sceneContext.fillStyle = cssVar("--canvas-muted");
-  sceneContext.fillText(`source x: ${snapshot.source.x.toFixed(1)} m`, 40, 74);
-  sceneContext.fillText(
-    `effect mode: ${effectModeLabel(snapshot.activeMode)}`,
-    40,
-    94,
-  );
-  sceneContext.fillText(
-    `target hears ${effectModeVerb(snapshot.activeMode)}: ${formatFrequency(snapshot.activeTarget)}`,
-    40,
-    114,
-  );
+  sceneContext.font = "600 13px Avenir Next, Segoe UI, sans-serif";
+  sceneContext.textBaseline = "bottom";
+  sceneContext.fillText(`x: ${snapshot.source.x.toFixed(1)} m`, 16, height - 12);
+  sceneContext.restore();
 }
 
 function drawAxes(context, width, height, padding, minY, maxY) {

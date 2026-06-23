@@ -13,6 +13,7 @@ const uploadedAudio = document.getElementById("uploaded-audio");
 const uploadedAudioName = document.getElementById("uploaded-audio-name");
 const removeAudioButton = document.getElementById("remove-audio");
 const liveAudioToggle = document.getElementById("live-audio-toggle");
+const liveAudioToggles = Array.from(document.querySelectorAll("[data-live-audio-toggle]"));
 const showNormalLocusToggle = document.getElementById("show-normal-locus");
 const circularTrackToggle = document.getElementById("circular-track");
 const audioEffectPrankInput = document.getElementById("audio-effect-prank");
