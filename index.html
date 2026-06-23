@@ -37,24 +37,54 @@
                 <h1>Doppler Prank Lab</h1>
               </div>
 
-              <button
-                id="theme-toggle"
-                class="theme-toggle secondary"
-                type="button"
-                aria-label="Switch to dark mode"
-                aria-pressed="false"
-              >
-                <span class="theme-toggle-icon" aria-hidden="true">◐</span>
-                <span id="theme-toggle-label">Dark mode</span>
-              </button>
+              <div class="hero-actions" aria-label="Display and audio controls">
+                <label class="live-toggle hero-action audio-monitor-toggle" for="live-audio-toggle" title="Live monitor">
+                  <input id="live-audio-toggle" type="checkbox" aria-label="Live monitor" />
+                  <span class="audio-icon audio-icon-off" aria-hidden="true">
+                    <svg viewBox="0 0 24 24">
+                      <path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor" />
+                      <path d="M17 9l4 4m0-4l-4 4" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="2" />
+                    </svg>
+                  </span>
+                  <span class="audio-icon audio-icon-on" aria-hidden="true">
+                    <svg viewBox="0 0 24 24">
+                      <path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor" />
+                      <path d="M17 8c1.2 1 2 2.5 2 4s-.8 3-2 4M19.5 5.5A8.7 8.7 0 0 1 23 12a8.7 8.7 0 0 1-3.5 6.5" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="2" />
+                    </svg>
+                  </span>
+                  <span class="sr-only">Live monitor</span>
+                </label>
+
+                <button
+                  id="theme-toggle"
+                  class="theme-toggle hero-action secondary"
+                  type="button"
+                  aria-label="Switch to dark mode"
+                  aria-pressed="false"
+                  title="Toggle dark mode"
+                >
+                  <span class="theme-toggle-icon theme-toggle-icon-moon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24">
+                      <path d="M20.2 15.3A8.4 8.4 0 0 1 8.7 3.8 8.8 8.8 0 1 0 20.2 15.3z" fill="currentColor" />
+                    </svg>
+                  </span>
+                  <span class="theme-toggle-icon theme-toggle-icon-sun" aria-hidden="true">
+                    <svg viewBox="0 0 24 24">
+                      <circle cx="12" cy="12" r="4" fill="currentColor" />
+                      <path d="M12 2v2m0 16v2M4.9 4.9l1.4 1.4m11.4 11.4 1.4 1.4M2 12h2m16 0h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="2" />
+                    </svg>
+                  </span>
+                  <span id="theme-toggle-label" class="sr-only">Dark mode</span>
+                </button>
+              </div>
             </div>
           </div>
-
-          <div class="stats-grid" id="stats-grid"></div>
 
           <div class="canvas-frame">
             <canvas id="scene-canvas" aria-label="Top-down simulation view"></canvas>
           </div>
+
+          <div class="stats-grid" id="stats-grid"></div>
 
           <div class="legend">
             <span><i class="swatch car"></i>Car path</span>
@@ -64,7 +94,7 @@
           </div>
         </section>
 
-        <div class="settings-sheet" id="settings-sheet">
+        <div class="settings-sheet" id="settings-sheet" data-active="audio">
           <div class="sheet-header">
             <span class="sheet-grabber"></span>
             <h2>Settings</h2>
@@ -72,8 +102,8 @@
           </div>
 
           <div class="sheet-tabs" role="tablist">
-            <button data-tab="controls" class="sheet-tab" role="tab" aria-selected="true">Controls</button>
-            <button data-tab="audio" class="sheet-tab" role="tab" aria-selected="false">Audio</button>
+            <button data-tab="audio" class="sheet-tab" role="tab" aria-selected="true">Audio</button>
+            <button data-tab="controls" class="sheet-tab" role="tab" aria-selected="false">Controls</button>
             <button data-tab="chart" class="sheet-tab" role="tab" aria-selected="false">Chart</button>
           </div>
 
@@ -126,10 +156,6 @@
                   <div>
                     <h3>Live Monitor</h3>
                   </div>
-                  <label class="live-toggle" for="live-audio-toggle">
-                    <input id="live-audio-toggle" type="checkbox" />
-                    <span class="live-toggle-track" aria-hidden="true"></span>
-                  </label>
                 </div>
 
                 <div class="live-monitor-field">

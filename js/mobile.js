@@ -9,7 +9,7 @@
   const playToggleDesktop = document.getElementById('play-toggle');
   const vizPanel = document.querySelector('.viz-panel');
 
-  let currentTab = 'controls';
+  let currentTab = 'audio';
 
   const mobileQuery = window.matchMedia('(max-width: 820px)');
 
@@ -116,6 +116,6 @@
 
   mobileQuery.addEventListener('change', syncSheetA11y);
 
-  switchTab('controls');
+  switchTab('audio');
   syncSheetA11y();
 })();
