@@ -141,19 +141,15 @@ class LiveSongProcessor extends AudioWorkletProcessor {
       return;
     }
 
-    const desiredHead = clamp(message.progress || 0, 0, 1) * Math.max(this.length - 1, 0);
     this.targetRate = clamp(message.playbackRate || 1, MIN_RATE, MAX_RATE);
     this.graphPlaying = Boolean(message.playing);
     this.active = true;
 
-    const driftSamples = this.currentReadHead - desiredHead;
     console.log(
-      `[worklet] transport applied | progress=${(message.progress || 0).toFixed(4)} desiredHead=${desiredHead.toFixed(1)} currentHead=${this.currentReadHead.toFixed(1)} drift=${driftSamples.toFixed(1)}smpl rate=${this.targetRate.toFixed(3)} hardSeek=${message.hardSeek} playing=${message.playing}`,
+      `[worklet] transport applied | currentHead=${this.currentReadHead.toFixed(1)} rate=${this.targetRate.toFixed(3)} playing=${message.playing}`,
     );
 
     if (!this.graphPlaying) {
-      this.currentReadHead = desiredHead;
-      this.targetReadHead = desiredHead;
       this.crossfadeRemaining = 0;
       this.port.postMessage({
         type: "position",
@@ -161,30 +157,6 @@ class LiveSongProcessor extends AudioWorkletProcessor {
       });
       return;
     }
-
-    if (message.hardSeek) {
-      if (!Number.isFinite(this.currentReadHead)) {
-        this.currentReadHead = desiredHead;
-      }
-
-      if (this.crossfadeRemaining <= 0) {
-        this.crossfadeFromHead = this.currentReadHead;
-      } else {
-        this.crossfadeFromHead = this.crossfadeToHead;
-      }
-      this.crossfadeToHead = desiredHead;
-      this.targetReadHead = desiredHead;
-      this.crossfadeRemaining = CROSSFADE_FRAMES;
-      console.log(
-        `[worklet] hard seek | from=${this.crossfadeFromHead.toFixed(1)} to=${desiredHead.toFixed(1)} crossfadeFrames=${CROSSFADE_FRAMES}`,
-      );
-      return;
-    }
-
-    // During normal playback, don't force the read head to the car position
-    // every frame — that couples song position to pass position and causes the
-    // phase corrector to constantly pitch-warp the audio. Instead let
-    // targetReadHead advance freely at targetRate (handled in writeNormalFrame).
   }
 
   writeCrossfadeFrame(outputChannels, frame) {

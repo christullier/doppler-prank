@@ -9,12 +9,12 @@ import wave
 
 import numpy as np
 
-wr = wave.open("sine.wav", "r")
+wr = wave.open("audio/sine.wav", "r")
 # Set the parameters for the output file.
 par = list(wr.getparams())
 par[3] = 0  # The number of samples will be set by writeframes.
 par = tuple(par)
-ww = wave.open("pitch1.wav", "w")
+ww = wave.open("audio/pitch1.wav", "w")
 ww.setparams(par)
 
 # The sound should be processed in small fractions of a second.

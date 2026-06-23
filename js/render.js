@@ -342,7 +342,7 @@ function drawScene(snapshot) {
         const t2 = worldTop / dirY;
         tMin = Math.max(tMin, Math.min(t1, t2));
         tMax = Math.min(tMax, Math.max(t1, t2));
-      } else if (worldBottom > worldTop) {
+      } else if (0 < worldBottom || 0 > worldTop) {
         return null;
       }
 
@@ -603,8 +603,6 @@ function setProgressFromScenePoint(point) {
     const normalized = (point.x - padding.x) / usableWidth;
     state.progress = clamp(normalized, 0, 1);
   }
-
-  requestLiveSongHardSync("car scrub");
 }
 
 function updateListenerFromScenePoint(name, point) {

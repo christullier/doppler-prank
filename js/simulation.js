@@ -41,7 +41,7 @@ function getCarVelocity(progress) {
 
 function dopplerObservedFrequency(emittedFrequency, source, listener, velocity = null) {
   const separation = distance(source, listener);
-  const effectiveVelocity = velocity || { vx: state.carSpeed, vy: 0 };
+  const effectiveVelocity = velocity || getCarVelocity(state.progress);
   if (separation <= 1e-6) {
     return {
       observed: emittedFrequency,
@@ -108,7 +108,7 @@ function sampleSeries(sampleCount = 220) {
   const samples = [];
 
   for (let index = 0; index < sampleCount; index += 1) {
-    const progress = index / (sampleCount - 1);
+    const progress = index / Math.max(sampleCount - 1, 1);
     const source = getSourcePosition(progress);
     const sourceVelocity = getCarVelocity(progress);
     const normalTarget = dopplerObservedFrequency(state.baseFrequency, source, target, sourceVelocity);

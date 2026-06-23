@@ -93,10 +93,9 @@ function setPlaybackState(playing) {
   syncLiveMonitorPlaybackState();
 
   if (audioState.live.active) {
-    if (willPlay && audioState.live.sourceMode === "song") {
-      requestLiveSongHardSync("playback resumed");
-    }
-    syncLiveMonitor(true);
+    // When pausing or resuming, don't hard-seek — let the worklet maintain
+    // its own playhead position. We only hard-seek on explicit car scrubs.
+    syncLiveMonitor(true, false);
   }
 }
 
@@ -199,7 +198,7 @@ async function ensureSongWorkletNode() {
 
   if (!audioState.live.songWorkletModulePromise) {
     audioState.live.songWorkletModulePromise = context.audioWorklet
-      .addModule("live-song-processor.js")
+      .addModule("live-song-processor.js?v=2")
       .catch((error) => {
         audioState.live.songWorkletModulePromise = null;
         throw error;
@@ -417,17 +416,11 @@ function syncLiveMonitor(force = false, hardSeekOverride = null) {
 
   audioState.live.perspective = perspective;
   if (sourceMode === "song") {
-    const hardSeek =
-      hardSeekOverride !== null
-        ? hardSeekOverride
-        : force || audioState.live.resumeNeedsHardSync;
     const transportKey = [
       audioState.live.songBufferVersion,
       perspective,
       state.playing ? "1" : "0",
       playbackRate.toFixed(3),
-      state.progress.toFixed(4),
-      hardSeek ? "1" : "0",
     ].join(":");
 
     const workletReady =
@@ -437,16 +430,14 @@ function syncLiveMonitor(force = false, hardSeekOverride = null) {
 
     if (workletReady && (force || transportKey !== audioState.live.lastSongTransportKey)) {
       console.log(
-        `[audio] transport sent | progress=${state.progress.toFixed(4)} rate=${playbackRate.toFixed(3)} freq=${frequency.toFixed(1)}Hz (raw=${rawFrequency.toFixed(1)}) base=${state.baseFrequency}Hz hardSeek=${hardSeek} playing=${state.playing} ctxTime=${context.currentTime.toFixed(3)}s`,
+        `[audio] transport sent | rate=${playbackRate.toFixed(3)} freq=${frequency.toFixed(1)}Hz (raw=${rawFrequency.toFixed(1)}) base=${state.baseFrequency}Hz playing=${state.playing} ctxTime=${context.currentTime.toFixed(3)}s`,
       );
       audioState.live.songWorkletNode.port.postMessage({
         type: "transport",
         bufferVersion: audioState.live.songBufferVersion,
-        progress: state.progress,
         playbackRate,
         playing: state.playing,
         perspective,
-        hardSeek,
         contextTime: context.currentTime,
       });
       audioState.live.lastSongTransportKey = transportKey;
@@ -491,10 +482,7 @@ async function handleAudioEffectModeChange() {
   render();
 
   if (audioState.live.active) {
-    if (audioState.live.sourceMode === "song") {
-      requestLiveSongHardSync("effect mode changed");
-    }
-    syncLiveMonitor(true);
+    syncLiveMonitor(true, false);
     return;
   }
 
