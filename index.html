@@ -26,19 +26,6 @@
   <body>
     <div class="page-shell">
       <main class="layout">
-        <section class="panel controls-panel">
-          <div class="panel-heading">
-            <h2>Controls</h2>
-          </div>
-
-          <div class="transport">
-            <button id="play-toggle" type="button">Pause</button>
-            <button id="reset" type="button" class="secondary">Reset</button>
-          </div>
-
-          <div id="control-groups" class="control-groups"></div>
-        </section>
-
         <section class="panel viz-panel">
           <div class="panel-heading panel-hero">
             <div class="hero-topbar">
@@ -85,133 +72,170 @@
           </div>
         </section>
 
-        <section class="panel chart-panel">
-          <div class="panel-heading">
-            <h2>Frequency Plot</h2>
-            <p>
-              Compare the natural Doppler shift with the compensated prank
-              pitch.
-            </p>
+        <div class="settings-sheet" id="settings-sheet">
+          <div class="sheet-header">
+            <span class="sheet-grabber"></span>
+            <h2>Settings</h2>
+            <button id="sheet-close" class="icon-button" aria-label="Close settings">×</button>
           </div>
 
-          <div class="canvas-frame chart-frame">
-            <canvas id="chart-canvas" aria-label="Frequency chart"></canvas>
-          </div>
-        </section>
-
-        <section class="panel audio-panel">
-          <div class="panel-heading">
-            <h2>Audio</h2>
+          <div class="sheet-tabs" role="tablist">
+            <button data-tab="controls" class="sheet-tab" role="tab" aria-selected="true">Controls</button>
+            <button data-tab="audio" class="sheet-tab" role="tab" aria-selected="false">Audio</button>
+            <button data-tab="chart" class="sheet-tab" role="tab" aria-selected="false">Chart</button>
           </div>
 
-          <div class="live-audio-card">
-            <div class="live-audio-header">
-              <div>
-                <h3>Live Monitor</h3>
+          <div class="sheet-body">
+            <section class="panel controls-panel" data-tab="controls">
+              <div class="panel-heading">
+                <h2>Controls</h2>
               </div>
-              <label class="live-toggle" for="live-audio-toggle">
-                <input id="live-audio-toggle" type="checkbox" />
-                <span class="live-toggle-track" aria-hidden="true"></span>
-              </label>
-            </div>
 
-            <div class="live-monitor-field">
-              <span>Live source</span>
-              <div class="radio-inputs" role="radiogroup" aria-label="Live source">
-                <label class="radio">
-                  <input id="live-source-synth" type="radio" name="live-source-mode" value="synth" />
-                  <span class="name">Tone</span>
-                </label>
-                <label class="radio">
-                  <input id="live-source-siren" type="radio" name="live-source-mode" value="siren" checked />
-                  <span class="name">Siren</span>
-                </label>
-                <label class="radio">
-                  <input id="live-source-song" type="radio" name="live-source-mode" value="song" />
-                  <span class="name">Song</span>
-                </label>
+              <div class="transport">
+                <button id="play-toggle" type="button">Pause</button>
+                <button id="reset" type="button" class="secondary">Reset</button>
               </div>
-            </div>
 
-            <div class="live-monitor-field">
-              <span>Listen from</span>
-              <div class="radio-inputs" role="radiogroup" aria-label="Listen from">
-                <label class="radio">
-                  <input id="live-perspective-car" type="radio" name="live-perspective" value="car" />
-                  <span class="name">Car</span>
-                </label>
-                <label class="radio">
-                  <input id="live-perspective-target" type="radio" name="live-perspective" value="target" checked />
-                  <span class="name">Target</span>
-                </label>
-                <label class="radio">
-                  <input id="live-perspective-bystander" type="radio" name="live-perspective" value="bystander" />
-                  <span class="name">Bystander</span>
-                </label>
+              <div id="control-groups" class="control-groups"></div>
+            </section>
+
+            <section class="panel chart-panel" data-tab="chart">
+              <div class="panel-heading">
+                <h2>Frequency Plot</h2>
+                <p>
+                  Compare the natural Doppler shift with the compensated prank
+                  pitch.
+                </p>
               </div>
-            </div>
 
-            <div class="live-monitor-field">
-              <span>Effect mode</span>
-              <div class="radio-inputs" role="radiogroup" aria-label="Effect mode">
-                <label class="radio">
-                  <input id="audio-effect-prank" type="radio" name="audio-effect-mode" value="prank" checked />
-                  <span class="name">Prank</span>
-                </label>
-                <label class="radio">
-                  <input id="audio-effect-normal" type="radio" name="audio-effect-mode" value="normal" />
-                  <span class="name">Normal</span>
-                </label>
+              <div class="canvas-frame chart-frame">
+                <canvas id="chart-canvas" aria-label="Frequency chart"></canvas>
               </div>
-            </div>
+            </section>
 
-            <div class="song-progress" id="song-progress" hidden>
-              <div class="song-progress-bar" role="progressbar" aria-label="Song position">
-                <div class="song-progress-fill" id="song-progress-fill"></div>
+            <section class="panel audio-panel" data-tab="audio">
+              <div class="panel-heading">
+                <h2>Audio</h2>
               </div>
-              <div class="song-progress-time">
-                <span id="song-progress-current">0:00</span>
-                <span id="song-progress-total">0:00</span>
-              </div>
-            </div>
 
-            <p class="live-audio-status" id="live-audio-status"></p>
-          </div>
-
-          <div class="audio-box">
-            <div class="audio-controls">
-              <label id="file-picker" class="file-picker">
-                <span>Upload audio</span>
-                <input id="audio-upload" type="file" accept="audio/*" />
-              </label>
-
-              <div id="uploaded-audio" class="uploaded-audio" hidden>
-                <div class="uploaded-audio-meta">
-                  <span id="uploaded-audio-name" class="uploaded-audio-name"></span>
+              <div class="live-audio-card">
+                <div class="live-audio-header">
+                  <div>
+                    <h3>Live Monitor</h3>
+                  </div>
+                  <label class="live-toggle" for="live-audio-toggle">
+                    <input id="live-audio-toggle" type="checkbox" />
+                    <span class="live-toggle-track" aria-hidden="true"></span>
+                  </label>
                 </div>
 
-                <button
-                  id="remove-audio"
-                  class="icon-button"
-                  type="button"
-                  aria-label="Remove uploaded audio"
-                >
-                  <svg viewBox="0 0 24 24" aria-hidden="true">
-                    <path
-                      d="M9 3h6l1 2h4v2H4V5h4l1-2zm1 7h2v8h-2v-8zm4 0h2v8h-2v-8zM7 10h2v8H7v-8zm1 10h8a2 2 0 0 0 2-2V8H6v10a2 2 0 0 0 2 2z"
-                      fill="currentColor"
-                    />
-                  </svg>
-                </button>
+                <div class="live-monitor-field">
+                  <span>Live source</span>
+                  <div class="radio-inputs" role="radiogroup" aria-label="Live source">
+                    <label class="radio">
+                      <input id="live-source-synth" type="radio" name="live-source-mode" value="synth" />
+                      <span class="name">Tone</span>
+                    </label>
+                    <label class="radio">
+                      <input id="live-source-siren" type="radio" name="live-source-mode" value="siren" checked />
+                      <span class="name">Siren</span>
+                    </label>
+                    <label class="radio">
+                      <input id="live-source-song" type="radio" name="live-source-mode" value="song" />
+                      <span class="name">Song</span>
+                    </label>
+                  </div>
+                </div>
+
+                <div class="live-monitor-field">
+                  <span>Listen from</span>
+                  <div class="radio-inputs" role="radiogroup" aria-label="Listen from">
+                    <label class="radio">
+                      <input id="live-perspective-car" type="radio" name="live-perspective" value="car" />
+                      <span class="name">Car</span>
+                    </label>
+                    <label class="radio">
+                      <input id="live-perspective-target" type="radio" name="live-perspective" value="target" checked />
+                      <span class="name">Target</span>
+                    </label>
+                    <label class="radio">
+                      <input id="live-perspective-bystander" type="radio" name="live-perspective" value="bystander" />
+                      <span class="name">Bystander</span>
+                    </label>
+                  </div>
+                </div>
+
+                <div class="live-monitor-field">
+                  <span>Effect mode</span>
+                  <div class="radio-inputs" role="radiogroup" aria-label="Effect mode">
+                    <label class="radio">
+                      <input id="audio-effect-prank" type="radio" name="audio-effect-mode" value="prank" checked />
+                      <span class="name">Prank</span>
+                    </label>
+                    <label class="radio">
+                      <input id="audio-effect-normal" type="radio" name="audio-effect-mode" value="normal" />
+                      <span class="name">Normal</span>
+                    </label>
+                  </div>
+                </div>
+
+                <div class="song-progress" id="song-progress" hidden>
+                  <div class="song-progress-bar" role="progressbar" aria-label="Song position">
+                    <div class="song-progress-fill" id="song-progress-fill"></div>
+                  </div>
+                  <div class="song-progress-time">
+                    <span id="song-progress-current">0:00</span>
+                    <span id="song-progress-total">0:00</span>
+                  </div>
+                </div>
+
+                <p class="live-audio-status" id="live-audio-status"></p>
               </div>
-            </div>
 
-            <p id="audio-status" class="audio-status">
-            </p>
+              <div class="audio-box">
+                <div class="audio-controls">
+                  <label id="file-picker" class="file-picker">
+                    <span>Upload audio</span>
+                    <input id="audio-upload" type="file" accept="audio/*" />
+                  </label>
+
+                  <div id="uploaded-audio" class="uploaded-audio" hidden>
+                    <div class="uploaded-audio-meta">
+                      <span id="uploaded-audio-name" class="uploaded-audio-name"></span>
+                    </div>
+
+                    <button
+                      id="remove-audio"
+                      class="icon-button"
+                      type="button"
+                      aria-label="Remove uploaded audio"
+                    >
+                      <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path
+                          d="M9 3h6l1 2h4v2H4V5h4l1-2zm1 7h2v8h-2v-8zm4 0h2v8h-2v-8zM7 10h2v8H7v-8zm1 10h8a2 2 0 0 0 2-2V8H6v10a2 2 0 0 0 2 2z"
+                          fill="currentColor"
+                        />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+
+                <p id="audio-status" class="audio-status">
+                </p>
+              </div>
+
+            </section>
           </div>
+        </div>
 
-        </section>
+        <div class="sheet-backdrop" id="sheet-backdrop" hidden></div>
       </main>
+
+      <div class="mobile-bar" id="mobile-bar">
+        <button id="play-toggle-mobile" class="mobile-bar-btn" aria-label="Play/pause">Pause</button>
+        <button id="reset-mobile" class="mobile-bar-btn secondary" aria-label="Reset">Reset</button>
+        <button id="settings-open" class="mobile-bar-btn primary">Settings</button>
+      </div>
     </div>
 
     <script src="js/config.js"></script>
@@ -222,6 +246,7 @@
     <script src="js/audio.js?v=3"></script>
     <script src="js/render.js?v=3"></script>
     <script src="js/events.js?v=3"></script>
+    <script src="js/mobile.js"></script>
     <script>
       (() => {
         function readTheme() {
