@@ -633,8 +633,9 @@ canvas {
 
 .scene-overlay-controls {
   display: flex;
+  flex-direction: column;
   gap: 12px;
-  padding-top: 10px;
+  padding: 4px 0 8px;
 }
 
 .overlay-toggle {
@@ -845,26 +846,16 @@ canvas {
   }
 
   .scene-overlay-controls {
-    position: absolute;
-    top: max(12px, env(safe-area-inset-top));
-    left: max(12px, env(safe-area-inset-left));
     display: flex;
-    gap: 8px;
-    padding: 0;
+    gap: 12px;
+    padding: 4px 0 8px;
     flex-direction: column;
-    z-index: 20;
   }
 
   .overlay-toggle {
     display: inline-flex;
     align-items: center;
-    gap: 8px;
-    padding: 10px 14px;
-    border-radius: 24px;
-    background: rgba(34, 23, 13, 0.7);
-    backdrop-filter: blur(12px);
-    color: #fff;
-    font-size: 0.75rem;
+    gap: 10px;
     min-height: 44px;
     cursor: pointer;
     user-select: none;

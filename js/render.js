@@ -136,6 +136,12 @@ function resizeCanvas(canvas) {
     canvas.width = width;
     canvas.height = height;
   }
+
+  // Draw in CSS pixels: scaling the context by the device pixel ratio keeps
+  // text, lines, and layout offsets crisp and correctly sized on high-DPR
+  // (retina / mobile) screens. Reapplied every frame because setting
+  // canvas.width above resets the transform.
+  canvas.getContext("2d").setTransform(ratio, 0, 0, ratio, 0, 0);
 }
 
 function updateStats(snapshot) {
@@ -190,19 +196,17 @@ function worldBounds() {
 }
 
 function scenePadding() {
-  const ratio = window.devicePixelRatio || 1;
-
   return {
-    x: 48 * ratio,
-    top: 34 * ratio,
-    bottom: 16 * ratio,
+    x: 48,
+    top: 34,
+    bottom: 16,
   };
 }
 
 function sceneLayout() {
   return {
-    width: sceneCanvas.width,
-    height: sceneCanvas.height,
+    width: sceneCanvas.clientWidth,
+    height: sceneCanvas.clientHeight,
     bounds: worldBounds(),
     padding: scenePadding(),
   };
@@ -497,9 +501,9 @@ function drawSeries(context, samples, key, color, width, height, padding, minY, 
 function drawChart(snapshot, samples) {
   resizeCanvas(chartCanvas);
 
-  const width = chartCanvas.width;
-  const height = chartCanvas.height;
-  const padding = 52 * (window.devicePixelRatio || 1);
+  const width = chartCanvas.clientWidth;
+  const height = chartCanvas.clientHeight;
+  const padding = 52;
 
   chartContext.clearRect(0, 0, width, height);
   chartContext.fillStyle = cssVar("--scene-bg");
@@ -532,6 +536,52 @@ function drawChart(snapshot, samples) {
     ["Bystander with prank", "#3458b8"],
   ];
 
+  const errorText = `Current bystander error: ${(snapshot.prankBystander.observed - state.targetFrequency).toFixed(1)} Hz`;
+
+  // On narrow (mobile) charts the top-left error readout and a top-right legend
+  // collide, so stack everything into a single legible card in the top-left.
+  if (width < 560) {
+    const padX = 12;
+    const padY = 10;
+    const rowH = 18;
+    const swatch = 14;
+
+    chartContext.font = "700 13px Avenir Next, Segoe UI, sans-serif";
+    let contentW = chartContext.measureText(errorText).width;
+    chartContext.font = "500 12px Avenir Next, Segoe UI, sans-serif";
+    legendItems.forEach(([label]) => {
+      contentW = Math.max(contentW, swatch + 8 + chartContext.measureText(label).width);
+    });
+
+    const cardX = 12;
+    const cardY = 12;
+    const cardW = contentW + padX * 2;
+    const cardH = padY * 2 + rowH + legendItems.length * rowH;
+
+    chartContext.fillStyle = cssVar("--canvas-card");
+    chartContext.strokeStyle = cssVar("--canvas-card-border");
+    chartContext.lineWidth = 1;
+    chartContext.beginPath();
+    chartContext.roundRect(cardX, cardY, cardW, cardH, 14);
+    chartContext.fill();
+    chartContext.stroke();
+
+    chartContext.fillStyle = cssVar("--canvas-text");
+    chartContext.font = "700 13px Avenir Next, Segoe UI, sans-serif";
+    chartContext.fillText(errorText, cardX + padX, cardY + padY + 12);
+
+    legendItems.forEach(([label, color], index) => {
+      const rowY = cardY + padY + rowH + index * rowH;
+      chartContext.fillStyle = color;
+      chartContext.fillRect(cardX + padX, rowY, swatch, 10);
+      chartContext.fillStyle = cssVar("--canvas-muted");
+      chartContext.font = "500 12px Avenir Next, Segoe UI, sans-serif";
+      chartContext.fillText(label, cardX + padX + swatch + 8, rowY + 9);
+    });
+
+    return;
+  }
+
   legendItems.forEach(([label, color], index) => {
     const y = 24 + index * 22;
     chartContext.fillStyle = color;
@@ -543,17 +593,13 @@ function drawChart(snapshot, samples) {
 
   chartContext.fillStyle = cssVar("--canvas-text");
   chartContext.font = "700 14px Avenir Next, Segoe UI, sans-serif";
-  chartContext.fillText(
-    `Current bystander error: ${(snapshot.prankBystander.observed - state.targetFrequency).toFixed(1)} Hz`,
-    20,
-    28,
-  );
+  chartContext.fillText(errorText, 20, 28);
 }
 
 function sceneEventPoint(event) {
   const rect = sceneCanvas.getBoundingClientRect();
-  const scaleX = sceneCanvas.width / Math.max(rect.width, 1);
-  const scaleY = sceneCanvas.height / Math.max(rect.height, 1);
+  const scaleX = sceneCanvas.clientWidth / Math.max(rect.width, 1);
+  const scaleY = sceneCanvas.clientHeight / Math.max(rect.height, 1);
 
   return {
     x: (event.clientX - rect.left) * scaleX,
@@ -564,15 +610,13 @@ function sceneEventPoint(event) {
 function isScenePointNearCar(point) {
   const { width, height, bounds, padding } = sceneLayout();
   const carPoint = mapPoint(getSourcePosition(state.progress), bounds, width, height, padding);
-  const ratio = window.devicePixelRatio || 1;
 
-  return Math.hypot(point.x - carPoint.x, point.y - carPoint.y) <= 24 * ratio;
+  return Math.hypot(point.x - carPoint.x, point.y - carPoint.y) <= 24;
 }
 
 function draggableSceneTarget(point) {
   const { width, height, bounds, padding } = sceneLayout();
-  const ratio = window.devicePixelRatio || 1;
-  const hitRadius = 24 * ratio;
+  const hitRadius = 24;
   const targets = [
     {
       mode: "car",

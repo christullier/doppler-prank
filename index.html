@@ -2,7 +2,10 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+    />
     <link rel="icon" href="data:," />
     <title>Doppler Prank Lab</title>
     <script>
@@ -53,17 +56,6 @@
             <canvas id="scene-canvas" aria-label="Top-down simulation view"></canvas>
           </div>
 
-          <div class="scene-overlay-controls">
-            <label class="overlay-toggle" for="show-normal-locus">
-              <input id="show-normal-locus" type="checkbox" />
-              <span>Show sounds-normal locus</span>
-            </label>
-            <label class="overlay-toggle" for="circular-track">
-              <input id="circular-track" type="checkbox" />
-              <span>Circular track</span>
-            </label>
-          </div>
-
           <div class="legend">
             <span><i class="swatch car"></i>Car path</span>
             <span><i class="swatch target"></i>Target</span>
@@ -94,6 +86,17 @@
               <div class="transport">
                 <button id="play-toggle" type="button">Pause</button>
                 <button id="reset" type="button" class="secondary">Reset</button>
+              </div>
+
+              <div class="scene-overlay-controls">
+                <label class="overlay-toggle" for="show-normal-locus">
+                  <input id="show-normal-locus" type="checkbox" />
+                  <span>Show sounds-normal locus</span>
+                </label>
+                <label class="overlay-toggle" for="circular-track">
+                  <input id="circular-track" type="checkbox" />
+                  <span>Circular track</span>
+                </label>
               </div>
 
               <div id="control-groups" class="control-groups"></div>
@@ -244,7 +247,7 @@
     <script src="js/utils.js"></script>
     <script src="js/simulation.js"></script>
     <script src="js/audio.js?v=3"></script>
-    <script src="js/render.js?v=3"></script>
+    <script src="js/render.js?v=4"></script>
     <script src="js/events.js?v=3"></script>
     <script src="js/mobile.js"></script>
     <script>
