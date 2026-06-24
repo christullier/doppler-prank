@@ -169,7 +169,7 @@ li {
   right: max(16px, env(safe-area-inset-right));
   z-index: 1000;
   margin-top: 0;
-  padding: 4px;
+  padding: 4px 4px 4px 2px;
   border: 1px solid var(--card-border-soft);
   border-radius: 999px;
   background: var(--panel);
@@ -890,7 +890,7 @@ canvas {
     justify-content: flex-end;
     gap: 8px;
     flex: 0 0 auto;
-    padding: 4px;
+    padding: 4px 4px 4px 2px;
     border: 1px solid var(--card-border-soft);
     border-radius: 999px;
     background: var(--panel);
@@ -934,7 +934,7 @@ canvas {
     justify-content: flex-end;
     gap: 8px;
     flex: 0 0 auto;
-    padding: 4px;
+    padding: 4px 4px 4px 2px;
     border: 1px solid var(--card-border-soft);
     border-radius: 999px;
     background: var(--panel);

@@ -1,3 +1,5 @@
+const KMH_PER_METER_PER_SECOND = 3.6;
+
 // Only the Car speed slider is shown. Every other parameter keeps its metadata
 // (so the simulation and scene-drag bounds still work) but is marked `hidden`
 // and stays fixed at its default value — buildControls() skips hidden items.
@@ -19,10 +21,12 @@ const controls = [
         key: "carSpeed",
         label: "Car speed",
         min: 5,
-        max: 45,
-        step: 0.5,
-        value: 45,
-        unit: "m/s",
+        max: 100 / KMH_PER_METER_PER_SECOND,
+        step: 1 / KMH_PER_METER_PER_SECOND,
+        value: 100 / KMH_PER_METER_PER_SECOND,
+        unit: "km/h",
+        displayScale: KMH_PER_METER_PER_SECOND,
+        displayStep: 1,
       },
       {
         key: "travelSpan",

@@ -45,6 +45,27 @@ function updateSongProgressUI() {
   }
 }
 
+function controlDisplayScale(item) {
+  return item.displayScale || 1;
+}
+
+function controlDisplayStep(item) {
+  return item.displayStep || item.step * controlDisplayScale(item);
+}
+
+function controlDisplayValue(item) {
+  return state[item.key] * controlDisplayScale(item);
+}
+
+function controlStateValue(item, displayValue) {
+  return displayValue / controlDisplayScale(item);
+}
+
+function formatControlValue(item) {
+  const step = controlDisplayStep(item);
+  return formatNumber(controlDisplayValue(item), item.unit, step < 1 ? 1 : 0);
+}
+
 function buildControls() {
   controlGroups.innerHTML = "";
 
@@ -77,24 +98,20 @@ function buildControls() {
 
       const value = document.createElement("span");
       value.id = `${item.key}-value`;
-      value.textContent = formatNumber(state[item.key], item.unit, item.step < 1 ? 1 : 0);
+      value.textContent = formatControlValue(item);
 
       header.append(label, value);
 
       const input = document.createElement("input");
       input.type = "range";
-      input.min = String(item.min);
-      input.max = String(item.max);
-      input.step = String(item.step);
-      input.value = String(state[item.key]);
+      input.min = String(item.min * controlDisplayScale(item));
+      input.max = String(item.max * controlDisplayScale(item));
+      input.step = String(controlDisplayStep(item));
+      input.value = String(controlDisplayValue(item));
       input.id = item.key;
       input.addEventListener("input", () => {
-        state[item.key] = Number(input.value);
-        value.textContent = formatNumber(
-          state[item.key],
-          item.unit,
-          item.step < 1 ? 1 : 0,
-        );
+        state[item.key] = controlStateValue(item, Number(input.value));
+        value.textContent = formatControlValue(item);
         render();
       });
 
@@ -114,16 +131,12 @@ function syncControlUI(key) {
 
   const input = document.getElementById(key);
   if (input) {
-    input.value = String(state[key]);
+    input.value = String(controlDisplayValue(item));
   }
 
   const value = document.getElementById(`${key}-value`);
   if (value) {
-    value.textContent = formatNumber(
-      state[key],
-      item.unit,
-      item.step < 1 ? 1 : 0,
-    );
+    value.textContent = formatControlValue(item);
   }
 }
 
