@@ -264,6 +264,60 @@ function drawDot(context, point, radius, color, label) {
   context.fillText(label, point.x + radius + 8, point.y - radius - 4);
 }
 
+function drawCar(context, point, color, angle, label) {
+  const fill = color.trim();
+
+  context.save();
+  context.translate(point.x, point.y);
+  context.rotate(angle);
+
+  const bodyLength = 30;
+  const bodyWidth = 16;
+  const halfLength = bodyLength / 2;
+  const halfWidth = bodyWidth / 2;
+
+  context.fillStyle = "rgba(0, 0, 0, 0.14)";
+  context.beginPath();
+  context.roundRect(-halfLength + 1, -halfWidth + 1, bodyLength, bodyWidth, 4);
+  context.fill();
+
+  context.fillStyle = fill;
+  context.strokeStyle = "rgba(0, 0, 0, 0.28)";
+  context.lineWidth = 1.5;
+  context.beginPath();
+  context.roundRect(-halfLength, -halfWidth, bodyLength, bodyWidth, 4);
+  context.fill();
+  context.stroke();
+
+  context.fillStyle = "rgba(255, 255, 255, 0.38)";
+  context.beginPath();
+  context.roundRect(halfLength * 0.12, -halfWidth * 0.55, halfLength * 0.55, bodyWidth * 0.55, 2);
+  context.fill();
+  context.beginPath();
+  context.roundRect(-halfLength * 0.78, -halfWidth * 0.5, halfLength * 0.45, bodyWidth * 0.5, 2);
+  context.fill();
+
+  context.fillStyle = "rgba(0, 0, 0, 0.55)";
+  const wheelRadius = 2.5;
+  const wheelInset = 4;
+  [
+    [halfLength - wheelInset, -halfWidth + 1],
+    [halfLength - wheelInset, halfWidth - 1],
+    [-halfLength + wheelInset, -halfWidth + 1],
+    [-halfLength + wheelInset, halfWidth - 1],
+  ].forEach(([wheelX, wheelY]) => {
+    context.beginPath();
+    context.arc(wheelX, wheelY, wheelRadius, 0, Math.PI * 2);
+    context.fill();
+  });
+
+  context.restore();
+
+  context.font = "600 13px Avenir Next, Segoe UI, sans-serif";
+  context.fillStyle = cssVar("--canvas-text");
+  context.fillText(label, point.x + 18, point.y - 14);
+}
+
 function drawScene(snapshot) {
   resizeCanvas(sceneCanvas);
 
@@ -403,11 +457,14 @@ function drawScene(snapshot) {
 
   }
 
-  drawDot(
+  const carVelocity = getCarVelocity(state.progress);
+  const carAngle = Math.atan2(carVelocity.vy, carVelocity.vx);
+
+  drawCar(
     sceneContext,
     sourcePoint,
-    10,
     getComputedStyle(document.documentElement).getPropertyValue("--car"),
+    carAngle,
     "car",
   );
   drawDot(
