@@ -21,7 +21,7 @@ const controls = [
         min: 5,
         max: 45,
         step: 0.5,
-        value: 18,
+        value: 45,
         unit: "m/s",
       },
       {

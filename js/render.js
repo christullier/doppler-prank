@@ -3,14 +3,14 @@ function syncThemeUI() {
   const nextTheme = themeState.current === "dark" ? "light" : "dark";
   const nextLabel = nextTheme === "dark" ? "Dark mode" : "Light mode";
 
-  if (themeToggle) {
-    themeToggle.setAttribute("aria-pressed", String(themeState.current === "dark"));
-    themeToggle.setAttribute("aria-label", `Switch to ${nextTheme} mode`);
-  }
+  themeToggles.forEach((toggle) => {
+    toggle.setAttribute("aria-pressed", String(themeState.current === "dark"));
+    toggle.setAttribute("aria-label", `Switch to ${nextTheme} mode`);
+  });
 
-  if (themeToggleLabel) {
-    themeToggleLabel.textContent = nextLabel;
-  }
+  themeToggleLabels.forEach((label) => {
+    label.textContent = nextLabel;
+  });
 }
 
 function updateSongProgressUI() {

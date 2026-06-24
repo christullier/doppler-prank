@@ -8,7 +8,8 @@ function formatDuration(seconds) {
 }
 
 function formatNumber(value, unit, digits = 1) {
-  return `${value.toFixed(digits)} ${unit}`;
+  const formatted = Number(value.toFixed(digits)).toString();
+  return `${formatted} ${unit}`;
 }
 
 function formatFrequency(value) {

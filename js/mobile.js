@@ -2,6 +2,7 @@
   const settingsSheet = document.getElementById('settings-sheet');
   const sheetBackdrop = document.getElementById('sheet-backdrop');
   const settingsOpen = document.getElementById('settings-open');
+  const chartButtons = Array.from(document.querySelectorAll('[data-main-view-toggle]'));
   const sheetClose = document.getElementById('sheet-close');
   const sheetTabs = document.querySelectorAll('.sheet-tab');
   const playToggleMobile = document.getElementById('play-toggle-mobile');
@@ -13,7 +14,7 @@
 
   const mobileQuery = window.matchMedia('(max-width: 820px)');
 
-  // The sheet wraps the Controls/Audio/Chart panels. On desktop those panels
+  // The sheet wraps the Controls/Audio panels. On desktop those panels
   // are laid out inline (display: contents) and must stay in the accessibility
   // tree; only when the sheet is a collapsed mobile overlay should it be
   // hidden from assistive tech.
@@ -25,7 +26,8 @@
     }
   }
 
-  function openSheet() {
+  function openSheet(tabName = currentTab) {
+    switchTab(tabName);
     settingsSheet.classList.add('is-open');
     syncSheetA11y();
 
@@ -76,13 +78,40 @@
     }
   }
 
+  function syncMainViewButton() {
+    const showingChart = document.body.dataset.mainView === 'chart';
+    chartButtons.forEach((button) => {
+      button.setAttribute('aria-pressed', String(showingChart));
+      button.setAttribute(
+        'aria-label',
+        showingChart ? 'Show simulation view' : 'Show frequency chart',
+      );
+      button.setAttribute(
+        'title',
+        showingChart ? 'Simulation view' : 'Frequency chart',
+      );
+    });
+  }
+
+  function toggleMainView() {
+    const showingChart = document.body.dataset.mainView === 'chart';
+    document.body.dataset.mainView = showingChart ? 'scene' : 'chart';
+    syncMainViewButton();
+    render();
+  }
+
   sheetTabs.forEach(tab => {
     tab.addEventListener('click', () => {
       switchTab(tab.dataset.tab);
     });
   });
 
-  settingsOpen.addEventListener('click', openSheet);
+  settingsOpen.addEventListener('click', () => {
+    openSheet(currentTab);
+  });
+  chartButtons.forEach((button) => {
+    button.addEventListener('click', toggleMainView);
+  });
   sheetClose.addEventListener('click', closeSheet);
 
   sheetBackdrop.addEventListener('click', closeSheet);
@@ -117,5 +146,6 @@
   mobileQuery.addEventListener('change', syncSheetA11y);
 
   switchTab('audio');
+  syncMainViewButton();
   syncSheetA11y();
 })();

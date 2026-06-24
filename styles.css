@@ -160,9 +160,29 @@ li {
 .hero-actions {
   display: inline-flex;
   align-items: center;
+  justify-content: flex-end;
   gap: 10px;
+  width: auto;
   flex-shrink: 0;
-  margin-top: 4px;
+  position: fixed;
+  top: max(16px, env(safe-area-inset-top));
+  right: max(16px, env(safe-area-inset-right));
+  z-index: 1000;
+  margin-top: 0;
+  padding: 4px;
+  border: 1px solid var(--card-border-soft);
+  border-radius: 999px;
+  background: var(--panel);
+  box-shadow: var(--shadow);
+  pointer-events: auto;
+}
+
+.mobile-panel-actions {
+  display: none;
+}
+
+.chart-heading-row {
+  display: block;
 }
 
 .panel-hero h1 {
@@ -184,8 +204,7 @@ li {
   display: grid;
   grid-template-columns: 340px minmax(0, 1fr) 340px;
   grid-template-areas:
-    "controls viz audio"
-    "controls chart audio";
+    "controls viz audio";
   gap: 20px;
   align-items: start;
 }
@@ -221,6 +240,21 @@ li {
 
 .chart-panel {
   grid-area: chart;
+  display: none;
+}
+
+body[data-main-view="chart"] .layout {
+  grid-template-areas:
+    "controls viz audio";
+}
+
+body[data-main-view="chart"] .viz-panel {
+  display: none;
+}
+
+body[data-main-view="chart"] .chart-panel {
+  display: block;
+  grid-area: viz;
 }
 
 .audio-panel {
@@ -482,6 +516,7 @@ button.secondary {
 }
 
 .theme-toggle-icon,
+.chart-open-icon,
 .audio-icon {
   display: inline-flex;
   align-items: center;
@@ -492,6 +527,7 @@ button.secondary {
 }
 
 .theme-toggle-icon svg,
+.chart-open-icon svg,
 .audio-icon svg {
   width: 20px;
   height: 20px;
@@ -815,7 +851,6 @@ canvas {
     grid-template-areas:
       "controls"
       "viz"
-      "chart"
       "audio";
   }
 
@@ -842,7 +877,24 @@ canvas {
   }
 
   .hero-actions {
+    display: none;
+    top: max(12px, env(safe-area-inset-top));
+    right: max(12px, env(safe-area-inset-right));
     align-self: flex-end;
+    z-index: 1000;
+  }
+
+  .mobile-panel-actions {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    flex: 0 0 auto;
+    padding: 4px;
+    border: 1px solid var(--card-border-soft);
+    border-radius: 999px;
+    background: var(--panel);
+    box-shadow: var(--shadow);
   }
 
   .live-audio-header {
@@ -867,6 +919,26 @@ canvas {
 
   .layout {
     display: contents;
+  }
+
+  .hero-actions {
+    display: none;
+    top: max(12px, env(safe-area-inset-top));
+    right: max(12px, env(safe-area-inset-right));
+    z-index: 1000;
+  }
+
+  .mobile-panel-actions {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    flex: 0 0 auto;
+    padding: 4px;
+    border: 1px solid var(--card-border-soft);
+    border-radius: 999px;
+    background: var(--panel);
+    box-shadow: var(--shadow);
   }
 
   .viz-panel {
@@ -1099,14 +1171,12 @@ canvas {
   }
 
   .settings-sheet[data-active="controls"] .controls-panel,
-  .settings-sheet[data-active="audio"] .audio-panel,
-  .settings-sheet[data-active="chart"] .chart-panel {
+  .settings-sheet[data-active="audio"] .audio-panel {
     display: block;
   }
 
   .controls-panel .panel-heading,
-  .audio-panel .panel-heading,
-  .chart-panel .panel-heading {
+  .audio-panel .panel-heading {
     display: none;
   }
 
@@ -1120,6 +1190,53 @@ canvas {
 
   #chart-canvas {
     height: 320px;
+  }
+
+  body[data-main-view="chart"] .chart-panel {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    padding:
+      max(12px, env(safe-area-inset-top))
+      max(12px, env(safe-area-inset-right))
+      calc(78px + max(12px, env(safe-area-inset-bottom)))
+      max(12px, env(safe-area-inset-left));
+    border: none;
+    border-radius: 0;
+    background: var(--bg);
+    box-shadow: none;
+    backdrop-filter: none;
+    z-index: 10;
+  }
+
+  body[data-main-view="chart"] .chart-panel .panel-heading {
+    flex-shrink: 0;
+    padding: 12px 0 0;
+  }
+
+  .chart-heading-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+  }
+
+  body[data-main-view="chart"] .chart-panel .panel-heading p {
+    display: none;
+  }
+
+  body[data-main-view="chart"] .chart-frame {
+    flex: 1;
+    min-height: 0;
+    margin: 12px 0 0;
+    border: none;
+    border-radius: 0;
+    background: transparent;
+  }
+
+  body[data-main-view="chart"] #chart-canvas {
+    height: 100%;
   }
 
   .sheet-backdrop {

@@ -24,7 +24,7 @@
         document.documentElement.dataset.theme = theme;
       })();
     </script>
-    <link rel="stylesheet" href="styles.css?v=2" />
+    <link rel="stylesheet" href="styles.css?v=3" />
   </head>
   <body>
     <div class="page-shell">
@@ -37,9 +37,21 @@
                 <h1>Doppler Prank Lab</h1>
               </div>
 
-              <div class="hero-actions" aria-label="Display and audio controls">
-                <label class="live-toggle hero-action audio-monitor-toggle" for="live-audio-toggle" title="Live monitor">
-                  <input id="live-audio-toggle" type="checkbox" aria-label="Live monitor" data-live-audio-toggle />
+              <div class="mobile-panel-actions" aria-label="Display and audio controls">
+                <button class="chart-open hero-action secondary" type="button" data-main-view-toggle aria-label="Open frequency chart" aria-pressed="false" title="Frequency chart">
+                  <span class="chart-open-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24">
+                      <path d="M4 19h16" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="2" />
+                      <path d="M5 16l4-5 4 3 5-8" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" />
+                      <circle cx="9" cy="11" r="1.4" fill="currentColor" />
+                      <circle cx="13" cy="14" r="1.4" fill="currentColor" />
+                      <circle cx="18" cy="6" r="1.4" fill="currentColor" />
+                    </svg>
+                  </span>
+                </button>
+
+                <label class="live-toggle hero-action audio-monitor-toggle" title="Live monitor">
+                  <input type="checkbox" aria-label="Live monitor" data-live-audio-toggle />
                   <span class="audio-icon audio-icon-off" aria-hidden="true">
                     <svg viewBox="0 0 24 24">
                       <path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor" />
@@ -49,20 +61,13 @@
                   <span class="audio-icon audio-icon-on" aria-hidden="true">
                     <svg viewBox="0 0 24 24">
                       <path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor" />
-                      <path d="M17 8c1.2 1 2 2.5 2 4s-.8 3-2 4M19.5 5.5A8.7 8.7 0 0 1 23 12a8.7 8.7 0 0 1-3.5 6.5" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="2" />
+                      <path d="M17 8c1.2 1 2.5 2 4s-.8 3-2 4M19.5 5.5A8.7 8.7 0 0 1 23 12a8.7 8.7 0 0 1-3.5 6.5" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="2" />
                     </svg>
                   </span>
                   <span class="sr-only">Live monitor</span>
                 </label>
 
-                <button
-                  id="theme-toggle"
-                  class="theme-toggle hero-action secondary"
-                  type="button"
-                  aria-label="Switch to dark mode"
-                  aria-pressed="false"
-                  title="Toggle dark mode"
-                >
+                <button class="theme-toggle hero-action secondary" type="button" data-theme-toggle aria-label="Switch to dark mode" aria-pressed="false" title="Toggle dark mode">
                   <span class="theme-toggle-icon theme-toggle-icon-moon" aria-hidden="true">
                     <svg viewBox="0 0 24 24">
                       <path d="M20.2 15.3A8.4 8.4 0 0 1 8.7 3.8 8.8 8.8 0 1 0 20.2 15.3z" fill="currentColor" />
@@ -74,9 +79,10 @@
                       <path d="M12 2v2m0 16v2M4.9 4.9l1.4 1.4m11.4 11.4 1.4 1.4M2 12h2m16 0h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="2" />
                     </svg>
                   </span>
-                  <span id="theme-toggle-label" class="sr-only">Dark mode</span>
+                  <span class="sr-only" data-theme-toggle-label>Dark mode</span>
                 </button>
               </div>
+
             </div>
           </div>
 
@@ -94,6 +100,67 @@
           </div>
         </section>
 
+        <section class="panel chart-panel" data-main-panel="chart">
+          <div class="panel-heading">
+            <div class="chart-heading-row">
+              <h2>Frequency Plot</h2>
+              <div class="mobile-panel-actions" aria-label="Display and audio controls">
+                <button class="chart-open hero-action secondary" type="button" data-main-view-toggle aria-label="Show simulation view" aria-pressed="true" title="Simulation view">
+                  <span class="chart-open-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24">
+                      <path d="M4 19h16" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="2" />
+                      <path d="M5 16l4-5 4 3 5-8" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" />
+                      <circle cx="9" cy="11" r="1.4" fill="currentColor" />
+                      <circle cx="13" cy="14" r="1.4" fill="currentColor" />
+                      <circle cx="18" cy="6" r="1.4" fill="currentColor" />
+                    </svg>
+                  </span>
+                </button>
+
+                <label class="live-toggle hero-action audio-monitor-toggle" title="Live monitor">
+                  <input type="checkbox" aria-label="Live monitor" data-live-audio-toggle />
+                  <span class="audio-icon audio-icon-off" aria-hidden="true">
+                    <svg viewBox="0 0 24 24">
+                      <path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor" />
+                      <path d="M17 9l4 4m0-4l-4 4" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="2" />
+                    </svg>
+                  </span>
+                  <span class="audio-icon audio-icon-on" aria-hidden="true">
+                    <svg viewBox="0 0 24 24">
+                      <path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor" />
+                      <path d="M17 8c1.2 1 2.5 2 4s-.8 3-2 4M19.5 5.5A8.7 8.7 0 0 1 23 12a8.7 8.7 0 0 1-3.5 6.5" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="2" />
+                    </svg>
+                  </span>
+                  <span class="sr-only">Live monitor</span>
+                </label>
+
+                <button class="theme-toggle hero-action secondary" type="button" data-theme-toggle aria-label="Switch to dark mode" aria-pressed="false" title="Toggle dark mode">
+                  <span class="theme-toggle-icon theme-toggle-icon-moon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24">
+                      <path d="M20.2 15.3A8.4 8.4 0 0 1 8.7 3.8 8.8 8.8 0 1 0 20.2 15.3z" fill="currentColor" />
+                    </svg>
+                  </span>
+                  <span class="theme-toggle-icon theme-toggle-icon-sun" aria-hidden="true">
+                    <svg viewBox="0 0 24 24">
+                      <circle cx="12" cy="12" r="4" fill="currentColor" />
+                      <path d="M12 2v2m0 16v2M4.9 4.9l1.4 1.4m11.4 11.4 1.4 1.4M2 12h2m16 0h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="2" />
+                    </svg>
+                  </span>
+                  <span class="sr-only" data-theme-toggle-label>Dark mode</span>
+                </button>
+              </div>
+            </div>
+            <p>
+              Compare the natural Doppler shift with the compensated prank
+              pitch.
+            </p>
+          </div>
+
+          <div class="canvas-frame chart-frame">
+            <canvas id="chart-canvas" aria-label="Frequency chart"></canvas>
+          </div>
+        </section>
+
         <div class="settings-sheet" id="settings-sheet" data-active="audio">
           <div class="sheet-header">
             <span class="sheet-grabber"></span>
@@ -104,7 +171,6 @@
           <div class="sheet-tabs" role="tablist">
             <button data-tab="audio" class="sheet-tab" role="tab" aria-selected="true">Audio</button>
             <button data-tab="controls" class="sheet-tab" role="tab" aria-selected="false">Controls</button>
-            <button data-tab="chart" class="sheet-tab" role="tab" aria-selected="false">Chart</button>
           </div>
 
           <div class="sheet-body">
@@ -130,20 +196,6 @@
               </div>
 
               <div id="control-groups" class="control-groups"></div>
-            </section>
-
-            <section class="panel chart-panel" data-tab="chart">
-              <div class="panel-heading">
-                <h2>Frequency Plot</h2>
-                <p>
-                  Compare the natural Doppler shift with the compensated prank
-                  pitch.
-                </p>
-              </div>
-
-              <div class="canvas-frame chart-frame">
-                <canvas id="chart-canvas" aria-label="Frequency chart"></canvas>
-              </div>
             </section>
 
             <section class="panel audio-panel" data-tab="audio">
@@ -275,23 +327,85 @@
 
         <div class="sheet-backdrop" id="sheet-backdrop" hidden></div>
       </main>
-
-      <div class="mobile-bar" id="mobile-bar">
-        <button id="play-toggle-mobile" class="mobile-bar-btn" aria-label="Play/pause">Pause</button>
-        <button id="reset-mobile" class="mobile-bar-btn secondary" aria-label="Reset">Reset</button>
-        <button id="settings-open" class="mobile-bar-btn primary">Settings</button>
-      </div>
     </div>
 
-    <script src="js/config.js"></script>
+    <div class="hero-actions" aria-label="Display and audio controls">
+        <button
+          id="chart-open"
+          class="chart-open hero-action secondary"
+          type="button"
+          data-main-view-toggle
+          aria-label="Open frequency chart"
+          aria-pressed="false"
+          title="Frequency chart"
+        >
+          <span class="chart-open-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24">
+              <path d="M4 19h16" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="2" />
+              <path d="M5 16l4-5 4 3 5-8" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" />
+              <circle cx="9" cy="11" r="1.4" fill="currentColor" />
+              <circle cx="13" cy="14" r="1.4" fill="currentColor" />
+              <circle cx="18" cy="6" r="1.4" fill="currentColor" />
+            </svg>
+          </span>
+        </button>
+
+        <label class="live-toggle hero-action audio-monitor-toggle" for="live-audio-toggle" title="Live monitor">
+          <input id="live-audio-toggle" type="checkbox" aria-label="Live monitor" data-live-audio-toggle />
+          <span class="audio-icon audio-icon-off" aria-hidden="true">
+            <svg viewBox="0 0 24 24">
+              <path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor" />
+              <path d="M17 9l4 4m0-4l-4 4" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="2" />
+            </svg>
+          </span>
+          <span class="audio-icon audio-icon-on" aria-hidden="true">
+            <svg viewBox="0 0 24 24">
+              <path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor" />
+              <path d="M17 8c1.2 1 2 2.5 2 4s-.8 3-2 4M19.5 5.5A8.7 8.7 0 0 1 23 12a8.7 8.7 0 0 1-3.5 6.5" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="2" />
+            </svg>
+          </span>
+          <span class="sr-only">Live monitor</span>
+        </label>
+
+        <button
+          id="theme-toggle"
+          class="theme-toggle hero-action secondary"
+          type="button"
+          data-theme-toggle
+          aria-label="Switch to dark mode"
+          aria-pressed="false"
+          title="Toggle dark mode"
+        >
+          <span class="theme-toggle-icon theme-toggle-icon-moon" aria-hidden="true">
+            <svg viewBox="0 0 24 24">
+              <path d="M20.2 15.3A8.4 8.4 0 0 1 8.7 3.8 8.8 8.8 0 1 0 20.2 15.3z" fill="currentColor" />
+            </svg>
+          </span>
+          <span class="theme-toggle-icon theme-toggle-icon-sun" aria-hidden="true">
+            <svg viewBox="0 0 24 24">
+              <circle cx="12" cy="12" r="4" fill="currentColor" />
+              <path d="M12 2v2m0 16v2M4.9 4.9l1.4 1.4m11.4 11.4 1.4 1.4M2 12h2m16 0h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="2" />
+            </svg>
+          </span>
+          <span id="theme-toggle-label" class="sr-only" data-theme-toggle-label>Dark mode</span>
+        </button>
+      </div>
+
+    <div class="mobile-bar" id="mobile-bar">
+      <button id="play-toggle-mobile" class="mobile-bar-btn" aria-label="Play/pause">Pause</button>
+      <button id="reset-mobile" class="mobile-bar-btn secondary" aria-label="Reset">Reset</button>
+      <button id="settings-open" class="mobile-bar-btn primary">Settings</button>
+    </div>
+
+    <script src="js/config.js?v=2"></script>
     <script src="js/state.js?v=6"></script>
-    <script src="js/dom.js?v=2"></script>
-    <script src="js/utils.js"></script>
+    <script src="js/dom.js?v=3"></script>
+    <script src="js/utils.js?v=2"></script>
     <script src="js/simulation.js"></script>
     <script src="js/audio.js?v=6"></script>
-    <script src="js/render.js?v=5"></script>
+    <script src="js/render.js?v=6"></script>
     <script src="js/events.js?v=5"></script>
-    <script src="js/mobile.js"></script>
+    <script src="js/mobile.js?v=2"></script>
     <script>
       (() => {
         function readTheme() {
@@ -308,18 +422,18 @@
             // Ignore storage issues and still apply the theme for this session.
           }
 
-          const button = document.getElementById("theme-toggle");
-          const label = document.getElementById("theme-toggle-label");
+          const buttons = Array.from(document.querySelectorAll("[data-theme-toggle]"));
+          const labels = Array.from(document.querySelectorAll("[data-theme-toggle-label]"));
           const upcomingTheme = nextTheme === "dark" ? "light" : "dark";
 
-          if (button) {
+          buttons.forEach((button) => {
             button.setAttribute("aria-pressed", String(nextTheme === "dark"));
             button.setAttribute("aria-label", `Switch to ${upcomingTheme} mode`);
-          }
+          });
 
-          if (label) {
+          labels.forEach((label) => {
             label.textContent = upcomingTheme === "dark" ? "Dark mode" : "Light mode";
-          }
+          });
 
           document.dispatchEvent(
             new CustomEvent("themechange", {
@@ -339,10 +453,9 @@
         };
 
         window.addEventListener("DOMContentLoaded", () => {
-          const button = document.getElementById("theme-toggle");
-          if (button) {
+          document.querySelectorAll("[data-theme-toggle]").forEach((button) => {
             button.addEventListener("click", toggleTheme);
-          }
+          });
 
           writeTheme(readTheme());
         });
